@@ -1,0 +1,15 @@
+print("🌍 Welcome to Voyara!")
+print("Your AI student travel agent")
+print()
+
+destination = input("Where do you want to go? ")
+days = input("How many days? ")
+travelers = input("How many people are travelling? ")
+budget = input("What is your total budget in ₹? ")
+
+print()
+print("✨ Here's what I understood:")
+print(f"Destination: {destination}")
+print(f"Duration: {days} days")
+print(f"Travelers: {travelers}")
+print(f"Budget: ₹{budget}")

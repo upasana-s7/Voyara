@@ -45,10 +45,13 @@ def load_profile():
     if os.path.exists(PROFILE_FILE):
 
         try:
+
             with open(PROFILE_FILE, "r", encoding="utf-8") as file:
                 profile = json.load(file)
 
+            # Make sure every required field exists
             for key in default_profile:
+
                 if key not in profile:
                     profile[key] = default_profile[key]
 
@@ -67,6 +70,7 @@ def load_profile():
 def save_profile(profile):
 
     with open(PROFILE_FILE, "w", encoding="utf-8") as file:
+
         json.dump(
             profile,
             file,
@@ -125,13 +129,13 @@ questions = {
 # ==================================================
 # SIMPLE LOCAL ANSWER EXTRACTION
 # ==================================================
-# IMPORTANT:
 # These functions do NOT call Gemini.
 # ==================================================
 
 def extract_answer(field, answer):
 
     answer = answer.strip()
+
 
     # ----------------------------------------------
     # DESTINATION
@@ -151,6 +155,7 @@ def extract_answer(field, answer):
         match = re.search(r"\d+", answer)
 
         if match:
+
             number = match.group()
 
             return f"{number} days"
@@ -176,6 +181,7 @@ def extract_answer(field, answer):
         match = re.search(r"\d+", answer)
 
         if match:
+
             number = match.group()
 
             return f"{number} travelers"
@@ -207,11 +213,17 @@ def extract_answer(field, answer):
 
     if field == "interests":
 
-        # Allow answers such as:
+        # Allows:
+        #
         # nature and food
         # nature, food, photography
+        # nature, food and photography
 
-        parts = re.split(r",|\band\b", answer, flags=re.IGNORECASE)
+        parts = re.split(
+            r",|\band\b",
+            answer,
+            flags=re.IGNORECASE
+        )
 
         interests = []
 
@@ -223,6 +235,8 @@ def extract_answer(field, answer):
                 interests.append(part)
 
         return interests
+
+    return answer
 
 
 # ==================================================
@@ -297,7 +311,7 @@ if len(missing_fields) < len(default_profile):
 
 
 # ==================================================
-# INITIAL USER MESSAGE
+# FIRST USER MESSAGE
 # ==================================================
 
 first_message = input("You: ").strip()
@@ -309,23 +323,59 @@ if first_message.lower() == "exit":
 
 
 # ==================================================
-# FIRST MESSAGE
+# PROCESS FIRST MESSAGE
 # ==================================================
-# We use Gemini ONCE here only if the user gives
-# multiple pieces of information at the beginning.
 #
-# After this, individual answers are handled locally.
+# IMPORTANT:
+#
+# The first message is ALWAYS sent to Gemini,
+# even when a saved profile already exists.
+#
+# Gemini receives the existing profile and the
+# new message, then returns the updated profile.
+#
+# This means:
+#
+# Saved:
+# destination = Kerala
+#
+# New message:
+# "I want to visit Kerala for 5 days.
+#  I love nature and food."
+#
+# Result:
+# destination = Kerala
+# duration = 5 days
+# interests = [nature, food]
+#
+# Only ONE Gemini call is used here.
 # ==================================================
 
-if not any(trip_profile.values()):
+extraction_prompt = f"""
+You are updating a travel profile.
 
-    extraction_prompt = f"""
-Extract trip information from this user message.
+Current saved trip profile:
 
-User message:
+{json.dumps(trip_profile, indent=4, ensure_ascii=False)}
+
+New user message:
+
 {first_message}
 
-Return ONLY valid JSON using exactly this structure:
+Update the current trip profile using ONLY information
+explicitly provided in the new user message.
+
+Rules:
+
+1. Keep existing information that the user did not change.
+2. Add new information from the user message.
+3. If the user clearly corrects existing information,
+   replace the old information.
+4. Never invent missing information.
+5. Keep unknown fields as null.
+6. interests must be a list.
+7. Return ONLY valid JSON.
+8. Use exactly this structure:
 
 {{
     "destination": null,
@@ -336,46 +386,70 @@ Return ONLY valid JSON using exactly this structure:
     "travel_month": null,
     "interests": []
 }}
-
-Rules:
-- Only use information explicitly provided.
-- Do not invent missing information.
-- interests must be a list.
 """
 
-    try:
 
-        response = client.models.generate_content(
-            model="gemini-3.6-flash",
-            contents=extraction_prompt
-        )
+try:
 
-        extracted = json.loads(response.text)
+    response = client.models.generate_content(
+        model="gemini-3.6-flash",
+        contents=extraction_prompt
+    )
 
-        for field in default_profile:
+    response_text = response.text.strip()
 
-            if field in extracted:
+    # Remove accidental markdown code fences
+    response_text = re.sub(
+        r"^```json\s*",
+        "",
+        response_text,
+        flags=re.IGNORECASE
+    )
 
-                value = extracted[field]
+    response_text = re.sub(
+        r"\s*```$",
+        "",
+        response_text
+    )
 
-                if value is not None and value != []:
-                    trip_profile[field] = value
+    extracted = json.loads(response_text)
 
-        save_profile(trip_profile)
+    # Update only valid fields
+    for field in default_profile:
 
-    except Exception:
+        if field in extracted:
 
-        print("\n⚠️ I couldn't process that message automatically.")
-        print("We'll collect the information one question at a time.")
+            value = extracted[field]
+
+            if value is not None and value != [] and value != "":
+
+                trip_profile[field] = value
+
+    save_profile(trip_profile)
 
 
-else:
+except Exception as error:
 
-    # If there was already saved information,
-    # treat the first message as an answer to the
-    # next missing question.
+    print("\n⚠️ I couldn't process that message automatically.")
 
-    pass
+    print("Error:", error)
+
+    print("\nWe'll continue one question at a time.")
+
+
+# ==================================================
+# SHOW UPDATED PROFILE
+# ==================================================
+
+print("\n🧠 Current Trip Profile:")
+
+print(
+    json.dumps(
+        trip_profile,
+        indent=4,
+        ensure_ascii=False
+    )
+)
 
 
 # ==================================================
@@ -387,9 +461,9 @@ while True:
     missing_fields = get_missing_fields(trip_profile)
 
 
-    # ----------------------------------------------
-    # COMPLETE PROFILE
-    # ----------------------------------------------
+    # ==================================================
+    # PROFILE COMPLETE
+    # ==================================================
 
     if not missing_fields:
 
@@ -409,6 +483,11 @@ while True:
             "\n🧳 Voyara is creating your personalized itinerary..."
         )
 
+
+        # ----------------------------------------------
+        # ITINERARY GENERATION
+        # ----------------------------------------------
+
         planner_prompt = f"""
 Completed trip profile:
 
@@ -416,6 +495,7 @@ Completed trip profile:
 
 Create the personalized itinerary now.
 """
+
 
         try:
 
@@ -428,9 +508,11 @@ Create the personalized itinerary now.
             )
 
             print("\n\n✈️ VOYARA'S ITINERARY\n")
+
             print(response.text)
 
             print("\n\n✅ Trip planning complete!")
+
 
         except Exception as error:
 
@@ -438,49 +520,65 @@ Create the personalized itinerary now.
 
             print("Error:", error)
 
+
         break
 
 
-    # ----------------------------------------------
-    # ASK ONE QUESTION
-    # ----------------------------------------------
+    # ==================================================
+    # ASK NEXT MISSING QUESTION
+    # ==================================================
 
     field = missing_fields[0]
 
     print(f"\n✈️ Voyara: {questions[field]}")
 
+
     answer = input("\nYou: ").strip()
 
 
-    # ----------------------------------------------
+    # ==================================================
     # EXIT
-    # ----------------------------------------------
+    # ==================================================
 
     if answer.lower() == "exit":
 
         save_profile(trip_profile)
 
         print("\n💾 Your trip information has been saved.")
+
         print("You can come back later and continue.")
+
         print("✈️ Thanks for planning with Voyara!")
 
         break
 
 
-    # ----------------------------------------------
-    # SAVE ANSWER LOCALLY
-    # ----------------------------------------------
+    # ==================================================
+    # PROCESS ANSWER LOCALLY
+    # ==================================================
+    #
+    # IMPORTANT:
+    #
+    # No Gemini API call happens here.
+    #
+    # This saves your API quota.
+    # ==================================================
 
     value = extract_answer(field, answer)
 
     trip_profile[field] = value
 
+
+    # ==================================================
+    # SAVE PROFILE
+    # ==================================================
+
     save_profile(trip_profile)
 
 
-    # ----------------------------------------------
-    # SHOW PROFILE
-    # ----------------------------------------------
+    # ==================================================
+    # SHOW UPDATED PROFILE
+    # ==================================================
 
     print("\n🧠 Current Trip Profile:")
 

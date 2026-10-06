@@ -70,10 +70,18 @@ def generate_with_gemini(prompt):
     """Generate text with Gemini, retrying transient errors and using a fallback model."""
     if not GEMINI_API_KEY:
         raise Exception("GEMINI_API_KEY is missing. Check your .env file.")
-    if gemini_client is None:
-        raise Exception("Gemini client is not available. Check the API key and google-genai installation.")
 
-    models = [MODEL_NAME] + [m for m in FALLBACK_MODELS if m != MODEL_NAME]
+    if gemini_client is None:
+        raise Exception(
+            "Gemini client is not available. "
+            "Check the API key and google-genai installation."
+        )
+
+    models = [MODEL_NAME] + [
+        m for m in FALLBACK_MODELS
+        if m != MODEL_NAME
+    ]
+
     last_error = None
 
     for model_name in models:
@@ -83,63 +91,113 @@ def generate_with_gemini(prompt):
                     model=model_name,
                     contents=prompt,
                 )
+
                 if not response.text:
                     raise Exception("Gemini returned an empty response.")
+
                 if model_name != MODEL_NAME:
-                    print(f"Gemini fallback model used: {model_name}")
+                    print(
+                        f"Gemini fallback model used: {model_name}"
+                    )
+
                 return response.text.strip()
+
             except Exception as error:
                 last_error = error
                 error_text = str(error).upper()
+
                 temporary_error = any(
                     marker in error_text
                     for marker in (
-                        "429", "RESOURCE_EXHAUSTED", "503", "UNAVAILABLE",
-                        "500", "INTERNAL", "502", "504", "DEADLINE_EXCEEDED",
+                        "429",
+                        "RESOURCE_EXHAUSTED",
+                        "503",
+                        "UNAVAILABLE",
+                        "500",
+                        "INTERNAL",
+                        "502",
+                        "504",
+                        "DEADLINE_EXCEEDED",
                     )
                 )
+
                 print(
                     f"Gemini request failed using {model_name} "
                     f"(attempt {attempt}/2): {error}"
                 )
+
                 if not temporary_error:
-                    # A model-specific 4xx error can be recoverable by the fallback model.
                     if model_name != MODEL_NAME:
                         raise
                     break
+
                 if attempt < 2:
                     time.sleep(2 ** attempt)
 
     raise Exception(
         "Gemini could not complete the request right now. "
-        "The primary model and fallback model were both unavailable or rate-limited. "
-        "Check the backend terminal for the exact Gemini error."
+        "The primary model and fallback model were both unavailable "
+        "or rate-limited. Check the backend terminal for the exact "
+        "Gemini error."
     ) from last_error
 
 
 def make_trip_prompt(data):
     """Create a concise, scan-friendly itinerary prompt."""
+
     destination = data.get("destination", "Not specified")
-    starting_location = data.get("startingLocation", "Not specified")
+    starting_location = data.get(
+        "startingLocation",
+        "Not specified"
+    )
     days = data.get("days", "Not specified")
     people = data.get("people", "Not specified")
     budget = data.get("budget", "Not specified")
-    travel_month = data.get("travelMonth", "Not specified")
-    preferences = data.get("preferences", "Not specified")
+    travel_month = data.get(
+        "travelMonth",
+        "Not specified"
+    )
+    preferences = data.get(
+        "preferences",
+        "Not specified"
+    )
+
     is_hourly = "hour" in str(days).lower()
-    itinerary_heading = "## Time-Block Itinerary" if is_hourly else "## Day-by-Day Itinerary"
+
+    itinerary_heading = (
+        "## Time-Block Itinerary"
+        if is_hourly
+        else "## Day-by-Day Itinerary"
+    )
+
     itinerary_instructions = (
-        "Organise the plan into realistic time blocks across the requested hours. Do not create a multi-day itinerary."
-        if is_hourly else
+        "Organise the plan into realistic time blocks "
+        "across the requested hours. Do not create a "
+        "multi-day itinerary."
+        if is_hourly
+        else
         "For every day, use this exact compact structure:"
     )
+
     itinerary_structure = (
-        "### Suggested time blocks\n- **Start:** activity + brief practical detail.\n- **Next:** activity + brief practical detail.\n- **Finish:** activity or relaxed option.\n- **Estimated cost:** approximate amount or 'varies'."
-        if is_hourly else
-        "### Day 1 — short theme\n- **Morning:** activity + one brief practical detail.\n- **Afternoon:** activity + one brief practical detail.\n- **Evening:** activity or relaxed option.\n- **Estimated day cost:** approximate amount or 'varies'.\nRepeat for all requested days."
+        "### Suggested time blocks\n"
+        "- **Start:** activity + brief practical detail.\n"
+        "- **Next:** activity + brief practical detail.\n"
+        "- **Finish:** activity or relaxed option.\n"
+        "- **Estimated cost:** approximate amount or 'varies'."
+        if is_hourly
+        else
+        "### Day 1 — short theme\n"
+        "- **Morning:** activity + one brief practical detail.\n"
+        "- **Afternoon:** activity + one brief practical detail.\n"
+        "- **Evening:** activity or relaxed option.\n"
+        "- **Estimated day cost:** approximate amount or 'varies'.\n"
+        "Repeat for all requested days."
     )
+
     return f"""
-You are Voyara, a practical travel planner. Create a realistic, concise itinerary.
+You are Voyara, a practical travel planner.
+Create a realistic, concise itinerary.
 
 TRIP DETAILS
 Destination: {destination}
@@ -188,22 +246,33 @@ Write no more than 2 short sentences.
 
 def make_message_prompt(message):
     """Create a concise itinerary from a combined frontend request."""
+
     return f"""
-You are Voyara, a practical travel planner. Create a concise, readable itinerary from this request:
+You are Voyara, a practical travel planner.
+Create a concise, readable itinerary from this request:
+
 {message}
 
-Use Markdown with these headings: ## Trip Overview, ## Quick Summary, an appropriate itinerary section
-(day-by-day for durations in days, time blocks for durations in hours), ## Local Food to Try,
-## Getting Around & Where to Stay, and ## Useful Tips. Use bold labels and short bullets. Keep the
-summary to 2 sentences maximum. Avoid long paragraphs and tables. Keep travel times realistic. Do not invent confirmed bookings, live prices, opening hours or availability.
+Use Markdown with these headings:
+## Trip Overview
+## Quick Summary
+an appropriate itinerary section
+(day-by-day for durations in days, time blocks for durations in hours)
+## Local Food to Try
+## Getting Around & Where to Stay
+## Useful Tips
+
+Use bold labels and short bullets.
+Keep the summary to 2 sentences maximum.
+Avoid long paragraphs and tables.
+Keep travel times realistic.
+Do not invent confirmed bookings, live prices, opening hours or availability.
 Label costs as estimates and ask the traveller to verify time-sensitive details.
 """
 
 
 def make_modify_prompt(data):
-    """
-    Creates a prompt to modify an existing itinerary.
-    """
+    """Creates a prompt to modify an existing itinerary."""
 
     itinerary = data.get("itinerary", "")
     modification = data.get("modification", "")
@@ -239,9 +308,7 @@ Rules:
 
 
 def make_regenerate_prompt(data):
-    """
-    Creates a prompt for generating an alternative itinerary.
-    """
+    """Creates a prompt for generating an alternative itinerary."""
 
     itinerary = data.get("itinerary", "")
     profile = data.get("profile", {})
@@ -315,8 +382,6 @@ def plan_trip():
             "error": "No trip details were received."
         }), 400
 
-    # The frontend can send either a combined message
-    # or separate form fields.
     message = str(
         data.get("message", "")
     ).strip()
@@ -438,7 +503,6 @@ def new_trip():
     })
 
 
-
 # ============================================================
 # DESTINATION GUIDE
 # ============================================================
@@ -446,13 +510,29 @@ def new_trip():
 @app.route("/api/destination-guide", methods=["POST"])
 def destination_guide():
     data = request.get_json(silent=True) or {}
-    destination = str(data.get("destination", "")).strip()
-    location = str(data.get("location", "")).strip()
-    place_type = str(data.get("type", "place")).strip()
-    if not destination:
-        return jsonify({"success": False, "error": "A destination is required."}), 400
 
-    prompt = f"""You are Voyara, a careful travel guide writer. Write a concise guide for this destination.
+    destination = str(
+        data.get("destination", "")
+    ).strip()
+
+    location = str(
+        data.get("location", "")
+    ).strip()
+
+    place_type = str(
+        data.get("type", "place")
+    ).strip()
+
+    if not destination:
+        return jsonify({
+            "success": False,
+            "error": "A destination is required."
+        }), 400
+
+    prompt = f"""
+You are Voyara, a careful travel guide writer.
+Write a concise guide for this destination.
+
 Destination: {destination}
 Location context from map search: {location}
 Place type: {place_type}
@@ -464,25 +544,71 @@ Return only valid JSON with these string fields:
 - duration: a suggested visit length, clearly approximate.
 - budget: concise cost guidance without inventing exact live prices.
 
-Do not make up attractions, current opening hours, current prices, bookings, safety guarantees or live availability. If uncertain, use cautious wording and tell the traveller to verify details. No markdown fences."""
+Do not make up attractions, current opening hours, current prices,
+bookings, safety guarantees or live availability.
+If uncertain, use cautious wording and tell the traveller to
+verify details. No markdown fences.
+"""
+
     try:
         raw = generate_with_gemini(prompt).strip()
-        cleaned = raw.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+
+        cleaned = (
+            raw
+            .removeprefix("```json")
+            .removeprefix("```")
+            .removesuffix("```")
+            .strip()
+        )
+
         try:
             guide = json.loads(cleaned)
+
         except json.JSONDecodeError:
-            guide = {"description": raw[:180], "introduction": raw[:600]}
+            guide = {
+                "description": raw[:180],
+                "introduction": raw[:600]
+            }
+
         return jsonify({
             "success": True,
-            "description": str(guide.get("description", "")).strip(),
-            "introduction": str(guide.get("introduction", "")).strip(),
-            "bestTime": str(guide.get("bestTime", "Check seasonal weather for your dates.")).strip(),
-            "duration": str(guide.get("duration", "Choose a duration based on the places you want to visit.")).strip(),
-            "budget": str(guide.get("budget", "Compare transport, accommodation, food and activity costs.")).strip()
+            "description": str(
+                guide.get("description", "")
+            ).strip(),
+
+            "introduction": str(
+                guide.get("introduction", "")
+            ).strip(),
+
+            "bestTime": str(
+                guide.get(
+                    "bestTime",
+                    "Check seasonal weather for your dates."
+                )
+            ).strip(),
+
+            "duration": str(
+                guide.get(
+                    "duration",
+                    "Choose a duration based on the places you want to visit."
+                )
+            ).strip(),
+
+            "budget": str(
+                guide.get(
+                    "budget",
+                    "Compare transport, accommodation, food and activity costs."
+                )
+            ).strip()
         })
+
     except Exception as error:
         print("DESTINATION GUIDE ERROR:", error)
-        return jsonify({"success": False, "error": "AI destination guidance is temporarily unavailable."}), 503
+
+        return jsonify({
+            "success": False,
+            "error": "AI destination guidance is temporarily unavailable."
+        }), 503
 
 
 # ============================================================
@@ -492,191 +618,604 @@ Do not make up attractions, current opening hours, current prices, bookings, saf
 @app.route("/api/chat", methods=["POST"])
 def chat_assistant():
     data = request.get_json(silent=True) or {}
-    message = str(data.get("message", "")).strip()
+
+    message = str(
+        data.get("message", "")
+    ).strip()
+
     history = data.get("history", [])
     context = data.get("context", {})
 
     if not message:
-        return jsonify({"success": False, "error": "Please enter a message."}), 400
+        return jsonify({
+            "success": False,
+            "error": "Please enter a message."
+        }), 400
 
     safe_history = []
+
     if isinstance(history, list):
         for item in history[-8:]:
             if isinstance(item, dict):
-                role = "User" if item.get("role") == "user" else "Voyara"
-                content = str(item.get("content", ""))[:1200]
+                role = (
+                    "User"
+                    if item.get("role") == "user"
+                    else "Voyara"
+                )
+
+                content = str(
+                    item.get("content", "")
+                )[:1200]
+
                 if content:
-                    safe_history.append(f"{role}: {content}")
+                    safe_history.append(
+                        f"{role}: {content}"
+                    )
 
-    prompt = f"""You are Voyara Assistant, a friendly and practical travel-planning helper inside a travel website.
-Help users navigate the app, plan trips, understand itineraries, budget, packing, destinations, and travel safety.
-Be concise, ask a clarifying question when needed, and never claim bookings, opening hours, prices, weather, or live availability are confirmed unless verified.
-For time-sensitive travel information, tell users to verify official sources. If asked how to use the website, give simple step-by-step instructions.
+    prompt = f"""
+You are Voyara Assistant, a friendly and practical
+travel-planning helper inside a travel website.
 
-Current app context (may be incomplete): {json.dumps(context, ensure_ascii=False)[:2000]}
+Help users navigate the app, plan trips, understand
+itineraries, budget, packing, destinations, and travel safety.
+
+Be concise, ask a clarifying question when needed,
+and never claim bookings, opening hours, prices,
+weather, or live availability are confirmed unless verified.
+
+For time-sensitive travel information, tell users to
+verify official sources.
+
+If asked how to use the website, give simple step-by-step instructions.
+
+Current app context (may be incomplete):
+{json.dumps(context, ensure_ascii=False)[:2000]}
+
 Recent conversation:
 {chr(10).join(safe_history)}
 
-User message: {message}
+User message:
+{message}
 
-Reply helpfully in plain text."""
+Reply helpfully in plain text.
+"""
+
     try:
         reply = generate_with_gemini(prompt)
-        return jsonify({"success": True, "reply": reply})
+
+        return jsonify({
+            "success": True,
+            "reply": reply
+        })
+
     except Exception as error:
         print("CHAT ERROR:", error)
-        return jsonify({"success": False, "error": "The AI assistant is temporarily unavailable. Please check that the backend and Gemini API are working, then try again."}), 503
 
+        return jsonify({
+            "success": False,
+            "error": (
+                "The AI assistant is temporarily unavailable. "
+                "Please check that the backend and Gemini API "
+                "are working, then try again."
+            )
+        }), 503
 
 
 # ============================================================
-# PLACE DISCOVERY (Google Places when configured; OSM fallback)
+# PLACE DISCOVERY
+# Google Places when configured; OSM fallback
 # ============================================================
 
 PLACE_CATEGORY_QUERY = {
-    "Food & Cafés": "top rated restaurants cafes local food and coffee",
-    "Attractions & Culture": "top tourist attractions museums cultural landmarks historic places",
-    "Nature & Outdoors": "top nature attractions parks beaches waterfalls viewpoints hiking outdoor places",
-    "Experiences & Activities": "top experiences activities adventure tours cultural experiences things to do",
-    "Shopping & Local Markets": "top shopping areas local markets bazaars shopping streets handicrafts",
-    "all": "top places to visit",
+    "Food & Cafés":
+        "top rated restaurants cafes local food and coffee",
+
+    "Attractions & Culture":
+        "top tourist attractions museums cultural landmarks historic places",
+
+    "Nature & Outdoors":
+        "top nature attractions parks beaches waterfalls viewpoints hiking outdoor places",
+
+    "Experiences & Activities":
+        "top experiences activities adventure tours cultural experiences things to do",
+
+    "Shopping & Local Markets":
+        "top shopping areas local markets bazaars shopping streets handicrafts",
+
+    "all":
+        "top places to visit",
 }
 
 
-def _json_request(url, payload=None, headers=None, timeout=18):
-    body = None if payload is None else json.dumps(payload).encode("utf-8")
-    request_headers = {"User-Agent": "VoyaraTravelPlanner/1.0 (local prototype)"}
+def _json_request(
+    url,
+    payload=None,
+    headers=None,
+    timeout=18
+):
+    body = (
+        None
+        if payload is None
+        else json.dumps(payload).encode("utf-8")
+    )
+
+    request_headers = {
+        "User-Agent": "VoyaraTravelPlanner/1.0 (local prototype)"
+    }
+
     if headers:
         request_headers.update(headers)
+
     if body is not None:
-        request_headers.setdefault("Content-Type", "application/json")
-    req = urllib.request.Request(url, data=body, headers=request_headers, method="GET" if body is None else "POST")
-    with urllib.request.urlopen(req, timeout=timeout) as response:
-        return json.loads(response.read().decode("utf-8"))
+        request_headers.setdefault(
+            "Content-Type",
+            "application/json"
+        )
+
+    req = urllib.request.Request(
+        url,
+        data=body,
+        headers=request_headers,
+        method="GET" if body is None else "POST"
+    )
+
+    with urllib.request.urlopen(
+        req,
+        timeout=timeout
+    ) as response:
+        return json.loads(
+            response.read().decode("utf-8")
+        )
 
 
 def _geocode_destination(destination):
-    query = urllib.parse.urlencode({"format": "jsonv2", "addressdetails": 1, "limit": 1, "q": destination})
-    data = _json_request(f"https://nominatim.openstreetmap.org/search?{query}", headers={"Accept-Language": "en"}, timeout=12)
+    query = urllib.parse.urlencode({
+        "format": "jsonv2",
+        "addressdetails": 1,
+        "limit": 1,
+        "q": destination
+    })
+
+    data = _json_request(
+        f"https://nominatim.openstreetmap.org/search?{query}",
+        headers={
+            "Accept-Language": "en"
+        },
+        timeout=12
+    )
+
     if not data:
-        raise ValueError("Destination not found. Try adding a state or country.")
+        raise ValueError(
+            "Destination not found. "
+            "Try adding a state or country."
+        )
+
     return data[0]
 
 
-def _google_places_search(destination, category, query_text):
-    category_text = PLACE_CATEGORY_QUERY.get(category, PLACE_CATEGORY_QUERY["all"])
-    text_query = " ".join(part for part in [query_text, category_text, destination] if part).strip()
-    payload = {"textQuery": text_query, "pageSize": 4}
-    fields = "places.id,places.displayName,places.formattedAddress,places.rating,places.userRatingCount,places.googleMapsUri,places.primaryTypeDisplayName,places.location"
+def _google_places_search(
+    destination,
+    category,
+    query_text
+):
+    category_text = PLACE_CATEGORY_QUERY.get(
+        category,
+        PLACE_CATEGORY_QUERY["all"]
+    )
+
+    text_query = " ".join(
+        part
+        for part in [
+            query_text,
+            category_text,
+            destination
+        ]
+        if part
+    ).strip()
+
+    payload = {
+        "textQuery": text_query,
+        "pageSize": 4
+    }
+
+    fields = (
+        "places.id,"
+        "places.displayName,"
+        "places.formattedAddress,"
+        "places.rating,"
+        "places.userRatingCount,"
+        "places.googleMapsUri,"
+        "places.primaryTypeDisplayName,"
+        "places.location"
+    )
+
     data = _json_request(
         "https://places.googleapis.com/v1/places:searchText",
         payload,
-        headers={"X-Goog-Api-Key": GOOGLE_MAPS_API_KEY, "X-Goog-FieldMask": fields},
-        timeout=18,
+        headers={
+            "X-Goog-Api-Key": GOOGLE_MAPS_API_KEY,
+            "X-Goog-FieldMask": fields
+        },
+        timeout=18
     )
-    # Google can return fewer category-specific results for a broad query.
-    # Retry once with a more direct category phrase before giving up.
+
     if not data.get("places"):
-        fallback_query = f"{category_text} in {destination}"
+        fallback_query = (
+            f"{category_text} in {destination}"
+        )
+
         if query_text:
-            fallback_query = f"{query_text} {fallback_query}"
+            fallback_query = (
+                f"{query_text} {fallback_query}"
+            )
+
         data = _json_request(
             "https://places.googleapis.com/v1/places:searchText",
-            {"textQuery": fallback_query, "pageSize": 4},
-            headers={"X-Goog-Api-Key": GOOGLE_MAPS_API_KEY, "X-Goog-FieldMask": fields},
-            timeout=18,
+            {
+                "textQuery": fallback_query,
+                "pageSize": 4
+            },
+            headers={
+                "X-Goog-Api-Key": GOOGLE_MAPS_API_KEY,
+                "X-Goog-FieldMask": fields
+            },
+            timeout=18
         )
+
     results = []
+
     for place in data.get("places", []):
-        display = place.get("displayName") or {}
-        name = str(display.get("text", "")).strip()
+        display = place.get(
+            "displayName"
+        ) or {}
+
+        name = str(
+            display.get("text", "")
+        ).strip()
+
         if not name:
             continue
-        location = place.get("location") or {}
+
+        location = place.get(
+            "location"
+        ) or {}
+
         results.append({
             "id": place.get("id", name),
             "name": name,
             "destination": destination,
             "category": category,
-            "type": (place.get("primaryTypeDisplayName") or {}).get("text", category),
-            "address": place.get("formattedAddress", ""),
-            "lat": location.get("latitude"),
-            "lon": location.get("longitude"),
-            "rating": place.get("rating"),
-            "ratingCount": place.get("userRatingCount"),
-            "mapUrl": place.get("googleMapsUri") or f"https://www.google.com/maps/search/?api=1&query={urllib.parse.quote(name + ', ' + destination)}",
+            "type": (
+                place.get(
+                    "primaryTypeDisplayName"
+                ) or {}
+            ).get(
+                "text",
+                category
+            ),
+            "address": place.get(
+                "formattedAddress",
+                ""
+            ),
+            "lat": location.get(
+                "latitude"
+            ),
+            "lon": location.get(
+                "longitude"
+            ),
+            "rating": place.get(
+                "rating"
+            ),
+            "ratingCount": place.get(
+                "userRatingCount"
+            ),
+            "mapUrl": (
+                place.get("googleMapsUri")
+                or
+                f"https://www.google.com/maps/search/"
+                f"?api=1&query="
+                f"{urllib.parse.quote(name + ', ' + destination)}"
+            ),
             "source": "Google Places",
         })
+
     return results
 
 
-def _osm_places_search(destination, category, query_text):
-    place = _geocode_destination(destination)
-    lat, lon = float(place["lat"]), float(place["lon"])
+def _osm_places_search(
+    destination,
+    category,
+    query_text
+):
+    place = _geocode_destination(
+        destination
+    )
+
+    lat = float(place["lat"])
+    lon = float(place["lon"])
+
     filters = {
-        "Food & Cafés": ['["amenity"~"restaurant|cafe|fast_food|food_court|bar"]', '["shop"~"bakery|pastry|confectionery|deli"]'],
-        "Attractions & Culture": ['["tourism"~"attraction|museum|gallery|zoo|theme_park"]', '["historic"]', '["amenity"="place_of_worship"]'],
-        "Nature & Outdoors": ['["natural"~"beach|waterfall|wood|peak"]', '["leisure"~"park|nature_reserve|garden"]', '["tourism"="viewpoint"]'],
-        "Experiences & Activities": ['["tourism"~"theme_park|zoo|attraction"]', '["leisure"~"sports_centre|water_park|golf_course|marina"]', '["sport"]'],
-        "Shopping & Local Markets": ['["shop"]', '["amenity"="marketplace"]'],
+        "Food & Cafés": [
+            '["amenity"~"restaurant|cafe|fast_food|food_court|bar"]',
+            '["shop"~"bakery|pastry|confectionery|deli"]'
+        ],
+
+        "Attractions & Culture": [
+            '["tourism"~"attraction|museum|gallery|zoo|theme_park"]',
+            '["historic"]',
+            '["amenity"="place_of_worship"]'
+        ],
+
+        "Nature & Outdoors": [
+            '["natural"~"beach|waterfall|wood|peak"]',
+            '["leisure"~"park|nature_reserve|garden"]',
+            '["tourism"="viewpoint"]'
+        ],
+
+        "Experiences & Activities": [
+            '["tourism"~"theme_park|zoo|attraction"]',
+            '["leisure"~"sports_centre|water_park|golf_course|marina"]',
+            '["sport"]'
+        ],
+
+        "Shopping & Local Markets": [
+            '["shop"]',
+            '["amenity"="marketplace"]'
+        ],
     }
-    selected = filters.get(category, sum(filters.values(), []))
-    blocks = "".join(f"nwr{rule}(around:12000,{lat},{lon});" for rule in selected)
-    query = f"[out:json][timeout:20];({blocks});out center tags 80;"
-    encoded = urllib.parse.urlencode({"data": query}).encode("utf-8")
-    req = urllib.request.Request("https://overpass-api.de/api/interpreter", data=encoded, headers={"User-Agent": "VoyaraTravelPlanner/1.0 (local prototype)", "Content-Type": "application/x-www-form-urlencoded"}, method="POST")
-    with urllib.request.urlopen(req, timeout=24) as response:
-        data = json.loads(response.read().decode("utf-8"))
-    results, seen = [], set()
-    for item in data.get("elements", []):
+
+    selected = filters.get(
+        category,
+        sum(filters.values(), [])
+    )
+
+    blocks = "".join(
+        f"nwr{rule}(around:12000,{lat},{lon});"
+        for rule in selected
+    )
+
+    query = (
+        f"[out:json][timeout:20];"
+        f"({blocks});"
+        f"out center tags 80;"
+    )
+
+    encoded = urllib.parse.urlencode({
+        "data": query
+    }).encode("utf-8")
+
+    req = urllib.request.Request(
+        "https://overpass-api.de/api/interpreter",
+        data=encoded,
+        headers={
+            "User-Agent":
+                "VoyaraTravelPlanner/1.0 (local prototype)",
+            "Content-Type":
+                "application/x-www-form-urlencoded"
+        },
+        method="POST"
+    )
+
+    with urllib.request.urlopen(
+        req,
+        timeout=24
+    ) as response:
+        data = json.loads(
+            response.read().decode("utf-8")
+        )
+
+    results = []
+    seen = set()
+
+    for item in data.get(
+        "elements",
+        []
+    ):
         tags = item.get("tags") or {}
-        name = str(tags.get("name") or tags.get("brand") or "").strip()
+
+        name = str(
+            tags.get("name")
+            or tags.get("brand")
+            or ""
+        ).strip()
+
         if not name or name.casefold() in seen:
             continue
-        coords = {"lat": item.get("lat", (item.get("center") or {}).get("lat")), "lon": item.get("lon", (item.get("center") or {}).get("lon"))}
-        if coords["lat"] is None or coords["lon"] is None:
+
+        center = item.get("center") or {}
+
+        coords = {
+            "lat": item.get(
+                "lat",
+                center.get("lat")
+            ),
+            "lon": item.get(
+                "lon",
+                center.get("lon")
+            )
+        }
+
+        if (
+            coords["lat"] is None
+            or
+            coords["lon"] is None
+        ):
             continue
-        seen.add(name.casefold())
-        place_type = next((tags.get(key) for key in ("amenity", "tourism", "shop", "leisure", "historic", "natural") if tags.get(key)), "Local place")
+
+        seen.add(
+            name.casefold()
+        )
+
+        place_type = next(
+            (
+                tags.get(key)
+                for key in (
+                    "amenity",
+                    "tourism",
+                    "shop",
+                    "leisure",
+                    "historic",
+                    "natural"
+                )
+                if tags.get(key)
+            ),
+            "Local place"
+        )
+
         results.append({
-            "id": f"osm-{item.get('type')}-{item.get('id')}", "name": name, "destination": destination,
-            "category": category, "type": str(place_type).replace("_", " "),
-            "address": tags.get("addr:street") or tags.get("addr:suburb") or tags.get("addr:city") or place.get("name", destination),
-            "lat": coords["lat"], "lon": coords["lon"], "rating": None, "ratingCount": None,
-            "mapUrl": f"https://www.google.com/maps/search/?api=1&query={urllib.parse.quote(name + ', ' + destination)}",
-            "source": "OpenStreetMap",
+            "id":
+                f"osm-{item.get('type')}-{item.get('id')}",
+
+            "name":
+                name,
+
+            "destination":
+                destination,
+
+            "category":
+                category,
+
+            "type":
+                str(place_type).replace(
+                    "_",
+                    " "
+                ),
+
+            "address":
+                tags.get("addr:street")
+                or tags.get("addr:suburb")
+                or tags.get("addr:city")
+                or place.get(
+                    "name",
+                    destination
+                ),
+
+            "lat":
+                coords["lat"],
+
+            "lon":
+                coords["lon"],
+
+            "rating":
+                None,
+
+            "ratingCount":
+                None,
+
+            "mapUrl":
+                f"https://www.google.com/maps/search/"
+                f"?api=1&query="
+                f"{urllib.parse.quote(name + ', ' + destination)}",
+
+            "source":
+                "OpenStreetMap",
         })
+
         if len(results) >= 4:
             break
+
     return results
 
 
-@app.route("/api/places", methods=["POST"])
+@app.route(
+    "/api/places",
+    methods=["POST"]
+)
 def discover_places():
-    data = request.get_json(silent=True) or {}
-    destination = str(data.get("destination", "")).strip()
-    category = str(data.get("category", "all")).strip()
-    query_text = str(data.get("query", "")).strip()
+    data = request.get_json(
+        silent=True
+    ) or {}
+
+    destination = str(
+        data.get(
+            "destination",
+            ""
+        )
+    ).strip()
+
+    category = str(
+        data.get(
+            "category",
+            "all"
+        )
+    ).strip()
+
+    query_text = str(
+        data.get(
+            "query",
+            ""
+        )
+    ).strip()
+
     if not destination:
-        return jsonify({"success": False, "error": "Enter a destination first."}), 400
+        return jsonify({
+            "success": False,
+            "error": "Enter a destination first."
+        }), 400
+
     try:
         if GOOGLE_MAPS_API_KEY:
-            results = _google_places_search(destination, category, query_text)
+            results = _google_places_search(
+                destination,
+                category,
+                query_text
+            )
             source = "Google Places"
+
         else:
-            results = _osm_places_search(destination, category, query_text)
+            results = _osm_places_search(
+                destination,
+                category,
+                query_text
+            )
             source = "OpenStreetMap"
+
         return jsonify({
-            "success": True, "source": source, "google_places_configured": bool(GOOGLE_MAPS_API_KEY),
-            "results": results[:4],
+            "success": True,
+            "source": source,
+            "google_places_configured":
+                bool(GOOGLE_MAPS_API_KEY),
+            "results":
+                results[:4],
         })
+
     except urllib.error.HTTPError as error:
-        print("PLACE LOOKUP HTTP ERROR:", error.code, error.reason)
-        message = "Google Places could not complete the search. Check that the API key, Places API and billing are configured." if GOOGLE_MAPS_API_KEY else "The open place directory is temporarily busy. Please try again in a moment."
-        return jsonify({"success": False, "error": message}), 503
+        print(
+            "PLACE LOOKUP HTTP ERROR:",
+            error.code,
+            error.reason
+        )
+
+        if GOOGLE_MAPS_API_KEY:
+            message = (
+                "Google Places could not complete the search. "
+                "Check that the API key, Places API and billing "
+                "are configured."
+            )
+        else:
+            message = (
+                "The open place directory is temporarily busy. "
+                "Please try again in a moment."
+            )
+
+        return jsonify({
+            "success": False,
+            "error": message
+        }), 503
+
     except Exception as error:
-        print("PLACE LOOKUP ERROR:", error)
-        return jsonify({"success": False, "error": "Place recommendations are temporarily unavailable. Check your connection and try again."}), 503
+        print(
+            "PLACE LOOKUP ERROR:",
+            error
+        )
+
+        return jsonify({
+            "success": False,
+            "error": (
+                "Place recommendations are temporarily unavailable. "
+                "Check your connection and try again."
+            )
+        }), 503
 
 
 # ============================================================
@@ -692,7 +1231,7 @@ if __name__ == "__main__":
     print("========================================\n")
 
     app.run(
-        host="127.0.0.1",
-        port=5000,
-        debug=True
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 5000)),
+        debug=False
     )

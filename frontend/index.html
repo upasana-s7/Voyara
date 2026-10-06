@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Voyara — Travel, your way.</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@500;600;700;800&display=swap"
+        rel="stylesheet"
+    >
+
+    <link rel="stylesheet" href="./style.css">
+
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    >
+</head>
+
+<body>
+
+    <!-- =========================================
+         WELCOME SCREEN
+    ========================================== -->
+
+    <div class="welcome-screen" id="welcomeScreen">
+
+        <div class="welcome-background-shape shape-one"></div>
+        <div class="welcome-background-shape shape-two"></div>
+
+        <div class="welcome-card">
+
+            <div class="brand-centered">
+                <div class="brand-mark">✦</div>
+                <h1>Voyara</h1>
+                <p>Travel, your way.</p>
+            </div>
+
+            <div class="welcome-content">
+
+                <span class="eyebrow">YOUR NEXT JOURNEY STARTS HERE</span>
+
+                <h2>
+                    Plan less.<br>
+                    <span>Explore more.</span>
+                </h2>
+
+                <p>
+                    Create thoughtful travel plans, discover new places,
+                    and keep your travel memories in one place.
+                </p>
+
+                <div class="voyara-auth-tabs" role="tablist" aria-label="Account options">
+                    <button type="button" class="voyara-auth-tab active" data-auth-mode="signup" role="tab" aria-selected="true">Create account</button>
+                    <button type="button" class="voyara-auth-tab" data-auth-mode="login" role="tab" aria-selected="false">Log in</button>
+                </div>
+                <form class="name-form" id="nameForm">
+                    <div id="signupNameField">
+                        <label for="nameInput">Your name</label>
+                        <input type="text" id="nameInput" placeholder="Enter your name" autocomplete="name" required>
+                    </div>
+                    <label for="contactInput">Email address or phone number</label>
+                    <input type="text" id="contactInput" placeholder="" autocomplete="username" required>
+                    <label for="passwordInput">Password</label>
+                    <input type="password" id="passwordInput" placeholder="" autocomplete="current-password" minlength="6" required>
+                    <button type="submit" class="primary-button full-width" id="authSubmitBtn">Create my account <span>→</span></button>
+                </form>
+
+                <div class="voyara-auth-divider"><span>or</span></div>
+                <button type="button" class="google-signin-button" id="googleSignInBtn">
+                    <span class="google-g-mark" aria-hidden="true">G</span> Continue with Google
+                </button>
+
+                <p class="welcome-note">
+                    Prototype accounts are stored in this browser. Real Google sign-in and SMS verification require an authentication provider.
+                </p>
+
+            </div>
+
+        </div>
+
+        <div class="welcome-footer">
+            <span>✦</span>
+            Voyara · Travel, your way.
+        </div>
+
+    </div>
+
+
+    <!-- =========================================
+         MAIN APP
+    ========================================== -->
+
+    <div class="app-layout hidden" id="app">
+
+        <!-- SIDEBAR -->
+
+        <aside class="sidebar">
+
+            <div class="brand sidebar-brand">
+                <div class="brand-mark">✦</div>
+
+                <div>
+                    <h1>Voyara</h1>
+                    <p>Travel, your way.</p>
+                </div>
+            </div>
+
+            <button
+                type="button"
+                class="new-journey-button"
+                id="newJourneyBtn"
+            >
+                <span class="new-journey-icon">＋</span>
+                New journey
+            </button>
+
+            <div class="sidebar-inspiration" aria-label="Travel inspiration">
+                <span class="sidebar-inspiration-kicker">A LITTLE INSPIRATION</span>
+                <p>“Collect moments, not miles.”</p>
+            </div>
+
+            <div class="sidebar-section">
+
+                <div class="sidebar-label">
+                    CURRENT JOURNEY
+                </div>
+
+                <div class="current-journey-card">
+
+                    <div class="current-journey-icon">✈</div>
+
+                    <div class="current-journey-info">
+                        <strong id="currentJourneyName">
+                            No journey yet
+                        </strong>
+
+                        <span id="currentJourneyMeta">
+                            Start planning your next adventure
+                        </span>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="sidebar-section">
+
+                <div class="sidebar-label-row">
+                    <div class="sidebar-label">
+                        SAVED JOURNEYS
+                    </div>
+
+                    <span
+                        class="sidebar-count"
+                        id="savedJourneyCount"
+                    >
+                        0
+                    </span>
+                </div>
+
+                <div
+                    class="saved-journeys-list"
+                    id="savedJourneysList"
+                >
+                    <div class="empty-sidebar-state">
+                        <span>✦</span>
+                        <p>No saved journeys yet.</p>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="sidebar-bottom">
+
+                <div class="sidebar-tip">
+                    <span class="tip-icon">✦</span>
+
+                    <div>
+                        <strong>Travel tip</strong>
+                        <p>
+                            Collect moments, not miles. The best stories often begin off the usual path.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="sidebar-copyright">
+                    © 2026 Voyara
+                </div>
+
+            </div>
+
+        </aside>
+
+
+        <!-- MAIN CONTENT -->
+
+        <main class="main-content">
+
+            <!-- TOPBAR -->
+
+            <header class="topbar">
+
+                <div class="mobile-brand brand">
+                    <div class="brand-mark">✦</div>
+
+                    <div>
+                        <h1>Voyara</h1>
+                    </div>
+                </div>
+
+                <nav class="main-nav">
+
+                    <button
+                        type="button"
+                        class="nav-link active"
+                        data-section="home"
+                    >
+                        Home
+                    </button>
+
+                    <button
+                        type="button"
+                        class="nav-link"
+                        data-section="planner"
+                    >
+                        Plan a trip
+                    </button>
+
+                    <button
+                        type="button"
+                        class="nav-link"
+                        data-section="explore"
+                    >
+                        Explore
+                    </button>
+
+                    <button
+                        type="button"
+                        class="nav-link"
+                        data-section="recommendations"
+                    >
+                        For you
+                    </button>
+
+                    <button
+                        type="button"
+                        class="nav-link"
+                        data-section="scrapbook"
+                    >
+                        Scrapbook
+                    </button>
+
+                    <button
+                        type="button"
+                        class="nav-link"
+                        data-section="trips"
+                    >
+                        My trips
+                    </button>
+
+                </nav>
+
+                <div class="topbar-actions">
+
+                    <button
+                        type="button"
+                        class="profile-button"
+                        id="profileButton"
+                    >
+                        <span id="profileInitial">U</span>
+                    </button>
+
+                    <div
+                        class="profile-menu hidden"
+                        id="profileMenu"
+                    >
+
+                        <div class="profile-menu-header">
+
+                            <div
+                                class="profile-menu-avatar"
+                                id="profileMenuInitial"
+                            >
+                                U
+                            </div>
+
+                            <div>
+                                <strong id="profileMenuName">
+                                    Traveller
+                                </strong>
+
+                                <span>Voyara traveller</span>
+                            </div>
+
+                        </div>
+
+                        <div class="profile-menu-divider"></div>
+
+                        <button
+                            type="button"
+                            id="changeNameBtn"
+                        >
+                            <span>✎</span>
+                            Change name
+                        </button>
+
+                        <button
+                            type="button"
+                            id="logoutBtn"
+                        >
+                            <span>↪</span>
+                            Log out
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </header>
+
+
+            <!-- =========================================
+                 HOME SECTION
+            ========================================== -->
+
+            <section
+                class="page-section active-section"
+                id="section-home"
+            >
+
+                <div class="home-hero">
+
+                    <div class="home-hero-copy">
+
+                        <span class="eyebrow">
+                            WELCOME TO YOUR TRAVEL SPACE
+                        </span>
+
+                        <h2>
+                            Hello, <span id="homeUserName">traveller</span>.<br>
+                            Where will you go next?
+                        </h2>
+
+                        <p>
+                            Turn your travel ideas into thoughtful itineraries,
+                            discover inspiring destinations, and save your
+                            favourite memories.
+                        </p>
+
+                        <button
+                            type="button"
+                            class="primary-button"
+                            id="planNewTripBtn"
+                            data-target="planner"
+                        >
+                            Plan a new trip
+                            <span>→</span>
+                        </button>
+
+                    </div>
+
+                    <div class="home-hero-art">
+
+                        <div class="sun-circle"></div>
+
+                        <div class="mountain mountain-back"></div>
+                        <div class="mountain mountain-front"></div>
+
+                        <div class="hero-plane">✈</div>
+
+                        <div class="hero-floating-card floating-card-top">
+                            <div class="floating-card-icon">✦</div>
+
+                            <div>
+                                <strong>Made for your journey</strong>
+                                <small>Plans that match your style</small>
+                            </div>
+                        </div>
+
+                        <div class="hero-floating-card floating-card-bottom">
+                            <div class="floating-card-icon">⌖</div>
+
+                            <div>
+                                <strong>Discover somewhere new</strong>
+                                <small>Collect moments, not just miles</small>
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <div class="home-stats-grid">
+
+                    <div class="home-stat-card">
+                        <div class="home-stat-icon">✈</div>
+
+                        <div>
+                            <strong id="homeTripCount">0</strong>
+                            <span>Saved journeys</span>
+                        </div>
+                    </div>
+
+                    <div class="home-stat-card">
+                        <div class="home-stat-icon">⌖</div>
+
+                        <div>
+                            <strong id="homeDestinationCount">0</strong>
+                            <span>Destinations explored</span>
+                        </div>
+                    </div>
+
+                    <div class="home-stat-card">
+                        <div class="home-stat-icon">♡</div>
+
+                        <div>
+                            <strong id="homeMemoryCount">0</strong>
+                            <span>Travel memories</span>
+                        </div>
+                    </div>
+
+                </div>
+
+
+                <div class="section-heading-row">
+                    <div>
+                        <span class="eyebrow">MAKE THE MOST OF VOYARA</span>
+                        <h3>Explore your travel space</h3>
+                    </div>
+                </div>
+
+                <div class="home-feature-grid">
+
+                    <button
+                        type="button"
+                        class="feature-card"
+                        data-target="planner"
+                    >
+                        <div class="feature-card-icon">✈</div>
+                        <h4>Plan My Trip</h4>
+                        <p>
+                            Build a personalised itinerary based on your
+                            destination, budget, and interests.
+                        </p>
+                        <span class="feature-card-link">
+                            Start planning →
+                        </span>
+                    </button>
+
+                    <button
+                        type="button"
+                        class="feature-card feature-card-explore"
+                        data-target="explore"
+                    >
+                        <div class="feature-card-icon">⌖</div>
+                        <h4>Explore places</h4>
+                        <p>
+                            Browse destinations and find inspiration for
+                            your next adventure.
+                        </p>
+                        <span class="feature-card-link">
+                            Discover places →
+                        </span>
+                    </button>
+
+                    <button
+                        type="button"
+                        class="feature-card feature-card-recommendations"
+                        data-target="recommendations"
+                    >
+                        <div class="feature-card-icon">✦</div>
+                        <h4>For you</h4>
+                        <p>
+                            Find travel ideas, tips, and suggestions for
+                            different travel styles.
+                        </p>
+                        <span class="feature-card-link">
+                            View suggestions →
+                        </span>
+                    </button>
+
+                    <button
+                        type="button"
+                        class="feature-card feature-card-scrapbook"
+                        data-target="scrapbook"
+                    >
+                        <div class="feature-card-icon">♡</div>
+                        <h4>Scrapbook</h4>
+                        <p>
+                            Save notes and photos from your favourite
+                            travel memories.
+                        </p>
+                        <span class="feature-card-link">
+                            Save memories →
+                        </span>
+                    </button>
+
+                </div>
+
+
+                <div class="section-heading-row recent-heading">
+                    <div>
+                        <span class="eyebrow">YOUR ACTIVITY</span>
+                        <h3>Recent journey</h3>
+                    </div>
+                </div>
+
+                <div
+                    class="home-recent-trip"
+                    id="homeRecentTrip"
+                >
+                    <div class="home-recent-empty">
+                        <div class="empty-state-icon">✈</div>
+                        <h4>No journey created yet</h4>
+                        <p>
+                            Your latest saved trip will appear here.
+                        </p>
+
+                        <button
+                            type="button"
+                            class="secondary-button"
+                            data-target="planner"
+                        >
+                            Create your first trip
+                        </button>
+                    </div>
+                </div>
+
+            </section>
+
+
+            <!-- =========================================
+                 PLANNER SECTION
+            ========================================== -->
+
+            <section
+                class="page-section"
+                id="section-planner"
+            >
+
+                <div class="section-page-header">
+
+                    <div>
+                        <span class="eyebrow">YOUR NEXT ADVENTURE</span>
+
+                        <h2>Plan My Trip</h2>
+
+                        <p>
+                            Tell Voyara what kind of journey you have in mind.
+                        </p>
+                    </div>
+
+                    <div class="section-header-decoration">✈</div>
+
+                </div>
+
+
+                <div class="planner-layout">
+
+                    <div class="planner-form-card">
+
+                        <form id="tripForm">
+
+                            <div class="form-section-title">
+                                <span class="form-number">01</span>
+
+                                <div>
+                                    <h3>Tell us about your trip</h3>
+                                    <p>
+                                        Add a few details to personalise your plan.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="destination">
+                                    Where do you want to go?
+                                </label>
+
+                                <div class="input-with-icon">
+                                    <span>⌖</span>
+
+                                    <input
+                                        type="text"
+                                        id="destination"
+                                        placeholder=""
+                                        required
+                                    >
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="startingLocation">
+                                    Where are you starting from?
+                                </label>
+
+                                <input
+                                    type="text"
+                                    id="startingLocation"
+                                    placeholder=""
+                                >
+                            </div>
+
+                            <div class="form-row">
+
+                                <div class="form-group">
+                                    <label for="days">Duration</label>
+
+                                    <div class="duration-input-row">
+                                        <input id="days" type="number" min="1" max="365" step="1" inputmode="numeric" aria-label="Duration amount" required>
+                                        <select id="durationUnit" aria-label="Duration unit" required>
+                                            <option value="" selected disabled>Unit</option>
+                                            <option value="hours">Hours</option>
+                                            <option value="days">Days</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="people">Travellers</label>
+
+                                    <input id="people" type="number" min="1" max="1000" step="1" inputmode="numeric" aria-label="Number of travellers">
+                                </div>
+
+                            </div>
+
+                            <div class="form-row">
+
+                                <div class="form-group">
+                                    <label for="budget">Approximate budget</label>
+
+                                    <input
+                                        type="text"
+                                        id="budget"
+                                        placeholder=""
+                                    >
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="travelMonth">Travel month</label>
+
+                                    <select id="travelMonth">
+                                        <option value="">Not decided</option>
+                                        <option value="January">January</option>
+                                        <option value="February">February</option>
+                                        <option value="March">March</option>
+                                        <option value="April">April</option>
+                                        <option value="May">May</option>
+                                        <option value="June">June</option>
+                                        <option value="July">July</option>
+                                        <option value="August">August</option>
+                                        <option value="September">September</option>
+                                        <option value="October">October</option>
+                                        <option value="November">November</option>
+                                        <option value="December">December</option>
+                                    </select>
+                                </div>
+
+                            </div>
+
+                            <div class="form-section-title form-section-spacing">
+                                <span class="form-number">02</span>
+
+                                <div>
+                                    <h3>What kind of experience do you want?</h3>
+                                    <p>
+                                        Mention your interests and preferences.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="preferences">
+                                    Travel preferences
+                                </label>
+
+                                <textarea
+                                    id="preferences"
+                                    placeholder=""
+                                ></textarea>
+                            </div>
+
+                            <div class="quick-suggestions">
+
+                                <span class="quick-suggestions-label">
+                                    Try a quick idea
+                                </span>
+
+                                <div class="suggestion-chips">
+
+                                    <button
+                                        type="button"
+                                        class="suggestion-chip"
+                                        data-prompt="A peaceful nature and food trip"
+                                    >
+                                        Nature + food
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        class="suggestion-chip"
+                                        data-prompt="A budget-friendly weekend trip"
+                                    >
+                                        Budget weekend
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        class="suggestion-chip"
+                                        data-prompt="A cultural and historical trip"
+                                    >
+                                        Culture + history
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        class="suggestion-chip"
+                                        data-prompt="A relaxing trip with scenic places"
+                                    >
+                                        Relaxing escape
+                                    </button>
+
+                                </div>
+
+                            </div>
+
+                            <div
+                                class="planner-status hidden"
+                                id="plannerStatus"
+                            ></div>
+
+                            <div
+                                class="planner-loading hidden"
+                                id="plannerLoading"
+                            >
+                                <div class="loading-spinner"></div>
+
+                                <div>
+                                    <strong>Creating your itinerary...</strong>
+                                    <span>
+                                        Voyara is putting your journey together.
+                                    </span>
+                                </div>
+                            </div>
+
+                            <button
+                                type="submit"
+                                class="primary-button planner-submit-button"
+                                id="planTripBtn"
+                            >
+                                Create my itinerary
+                                <span>→</span>
+                            </button>
+
+                        </form>
+
+                    </div>
+
+
+                    <div class="planner-side-panel">
+
+                        <div class="planner-inspiration-card">
+
+                            <div class="inspiration-icon">✦</div>
+
+                            <h3>
+                                Every journey begins with an idea.
+                            </h3>
+
+                            <p>
+                                Give us your destination, preferences, and
+                                budget. We will help turn them into a practical
+                                travel plan.
+                            </p>
+
+                            <div class="inspiration-list">
+                                <div>
+                                    <span>✓</span>
+                                    Personalised suggestions
+                                </div>
+
+                                <div>
+                                    <span>✓</span>
+                                    Day-by-day itinerary
+                                </div>
+
+                                <div>
+                                    <span>✓</span>
+                                    Budget-conscious ideas
+                                </div>
+
+                                <div>
+                                    <span>✓</span>
+                                    Easy itinerary changes
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <div class="planner-note-card">
+                            <span>✦</span>
+
+                            <p>
+                                Travel details such as prices and opening
+                                hours can change. Always verify them before
+                                making bookings.
+                            </p>
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <div
+                    class="itinerary-container hidden"
+                    id="itineraryContainer"
+                >
+
+                    <div class="section-heading-row">
+                        <div>
+                            <span class="eyebrow">YOUR GENERATED PLAN</span>
+                            <h3>Your itinerary</h3>
+                        </div>
+                    </div>
+
+                    <div
+                        class="itinerary-preview"
+                        id="itineraryPreview"
+                    ></div>
+
+                    <div
+                        class="itinerary-actions"
+                        id="itineraryActions"
+                    >
+
+                        <button
+                            type="button"
+                            class="secondary-button"
+                            id="saveTripBtn"
+                        >
+                            ♡ Save trip
+                        </button>
+
+                        <button
+                            type="button"
+                            class="secondary-button"
+                            id="regenerateBtn"
+                        >
+                            ↻ Regenerate
+                        </button>
+
+                        <div class="modify-trip-box">
+
+                            <input
+                                type="text"
+                                id="modifyInput"
+                                placeholder="Ask to change something..."
+                            >
+
+                            <button
+                                type="button"
+                                class="primary-button"
+                                id="modifyBtn"
+                            >
+                                Modify
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- =========================================
+                 EXPLORE SECTION
+            ========================================== -->
+
+            <section class="page-section" id="section-explore">
+                <div class="section-page-header">
+                    <div>
+                        <span class="eyebrow">FIND YOUR NEXT PLACE</span>
+                        <h2>Explore</h2>
+                        <p>Search any city, state, country, or destination and get useful travel details.</p>
+                    </div>
+                    <div class="section-header-decoration">⌖</div>
+                </div>
+
+                <div class="explore-search-bar">
+                    <span>⌕</span>
+                    <input type="text" id="exploreSearch" placeholder="Search any destination..." aria-label="Search any destination">
+                    <button type="button" class="primary-button" id="exploreSearchBtn">Search</button>
+                </div>
+
+                <div class="explore-layout">
+                    <div class="explore-results-column">
+                        <div class="explore-results-heading">
+                            <div>
+                                <span class="eyebrow">RECOMMENDED DESTINATIONS</span>
+                                <h3>Places to explore</h3>
+                            </div>
+                        </div>
+                        <div class="destination-grid" id="destinationGrid"></div>
+                    </div>
+
+                    <div class="explore-map-panel">
+                        <div class="map-panel-heading">
+                            <div>
+                                <span class="eyebrow">DISCOVER</span>
+                                <h3>Travel map</h3>
+                            </div>
+                            <span class="map-pin-label">⌖</span>
+                        </div>
+                        <div class="travel-map" id="travelMap"></div>
+                        <div class="map-places" id="mapPlaces"></div>
+                    </div>
+                </div>
+            </section>
+
+
+            <!-- =========================================
+                 RECOMMENDATIONS SECTION
+            ========================================== -->
+
+            <section class="page-section" id="section-recommendations">
+                <div class="section-page-header">
+                    <div>
+                        <span class="eyebrow">TRAVEL INSPIRATION</span>
+                        <h2>For You</h2>
+                        <p>Search a destination, choose a category, and discover places worth adding to your trip.</p>
+                    </div>
+                    <div class="section-header-decoration">✦</div>
+                </div>
+
+                <div class="recommendation-intro-card">
+                    <div class="recommendation-intro-icon">✦</div>
+                    <div>
+                        <h3>Find places for the way you want to travel.</h3>
+                        <p>Pick one of the five categories below. Voyara searches the destination you enter and shows useful recommendations with real ratings when the place source provides them.</p>
+                    </div>
+                </div>
+
+                <div class="voyara-for-you-toolbar">
+                    <label>
+                        <span>Destination</span>
+                        <input id="forYouSearch" type="search" placeholder="e.g. Goa, Kashmir, Paris..." aria-label="For You destination">
+                    </label>
+                    <label>
+                        <span>Category</span>
+                        <select id="forYouCategory" aria-label="For You category">
+                            <option value="all">All five categories</option>
+                            <option value="Food & Cafés">🍽️ Food & Cafés</option>
+                            <option value="Attractions & Culture">🏛️ Attractions & Culture</option>
+                            <option value="Nature & Outdoors">🌿 Nature & Outdoors</option>
+                            <option value="Experiences & Activities">🎯 Experiences & Activities</option>
+                            <option value="Shopping & Local Markets">🛍️ Shopping & Local Markets</option>
+                        </select>
+                    </label>
+                    <button type="button" class="primary-button" id="forYouSearchBtn">Find places</button>
+                </div>
+
+                <p class="voyara-source-note for-you-source-note" id="forYouSourceNote"></p>
+                <div class="recommendation-grid" id="recommendationGrid"></div>
+            </section>
+
+
+            <!-- =========================================
+                 SCRAPBOOK SECTION
+            ========================================== -->
+            <section class="page-section" id="section-scrapbook">
+                <div id="voyaraScrapbookMount"></div>
+            </section>
+
+
+            <!-- =========================================
+                 MY TRIPS SECTION
+            ========================================== -->
+
+            <section
+                class="page-section"
+                id="section-trips"
+            >
+
+                <div class="section-page-header">
+
+                    <div>
+                        <span class="eyebrow">YOUR JOURNEY COLLECTION</span>
+                        <h2>My trips</h2>
+                        <p>
+                            View the itineraries you have saved.
+                        </p>
+                    </div>
+
+                    <div class="section-header-decoration">✈</div>
+
+                </div>
+
+                <div
+                    class="trip-grid"
+                    id="tripGrid"
+                ></div>
+
+            </section>
+
+
+            <!-- =========================================
+                 FULL ITINERARY SECTION
+            ========================================== -->
+
+            <section
+                class="page-section"
+                id="section-itinerary"
+            >
+
+                <div class="section-page-header">
+
+                    <div>
+                        <span class="eyebrow">SAVED JOURNEY</span>
+                        <h2>Itinerary</h2>
+                        <p>
+                            Review your complete travel plan.
+                        </p>
+                    </div>
+
+                </div>
+
+                <div
+                    class="full-itinerary"
+                    id="itinerary"
+                ></div>
+
+                <div class="itinerary-actions">
+
+                    <button
+                        type="button"
+                        class="secondary-button"
+                        id="backToTripsBtn"
+                    >
+                        ← Back to my trips
+                    </button>
+
+                    <button type="button" class="primary-button" id="printItineraryPdfBtn">
+                        Print / Save as PDF
+                    </button>
+
+                </div>
+
+            </section>
+
+        </main>
+
+    </div>
+
+
+    <!-- =========================================
+         TEXT MEMORY MODAL
+    ========================================== -->
+
+    <div
+        class="modal-overlay hidden"
+        id="noteModal"
+    >
+
+        <div class="modal-card">
+
+            <div class="modal-header">
+
+                <div>
+                    <span class="eyebrow">NEW MEMORY</span>
+                    <h3>Add a note</h3>
+                </div>
+
+                <button
+                    type="button"
+                    class="modal-close"
+                    id="closeNoteModal"
+                >
+                    ×
+                </button>
+
+            </div>
+
+            <div class="form-group">
+                <label for="memoryTitle">Title</label>
+                <input
+                    type="text"
+                    id="memoryTitle"
+                    placeholder="Example: A peaceful evening"
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="memoryLocation">Location</label>
+                <input
+                    type="text"
+                    id="memoryLocation"
+                    placeholder="Example: Coorg"
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="memoryDate">Date</label>
+                <input
+                    type="date"
+                    id="memoryDate"
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="memoryText">Your memory</label>
+                <textarea
+                    id="memoryText"
+                    placeholder="Write about your experience..."
+                ></textarea>
+            </div>
+
+            <div class="modal-actions">
+
+                <button
+                    type="button"
+                    class="secondary-button"
+                    id="cancelTextMemoryBtn"
+                >
+                    Cancel
+                </button>
+
+                <button
+                    type="button"
+                    class="primary-button"
+                    id="saveTextMemoryBtn"
+                >
+                    Save note
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================================
+         PHOTO MEMORY MODAL
+    ========================================== -->
+
+    <div
+        class="modal-overlay hidden"
+        id="photoMemoryModal"
+    >
+
+        <div class="modal-card">
+
+            <div class="modal-header">
+
+                <div>
+                    <span class="eyebrow">NEW MEMORY</span>
+                    <h3>Add a photo</h3>
+                </div>
+
+                <button
+                    type="button"
+                    class="modal-close"
+                    id="closePhotoMemoryModal"
+                >
+                    ×
+                </button>
+
+            </div>
+
+            <div
+                class="photo-preview"
+                id="photoPreview"
+            ></div>
+
+            <div class="form-group">
+                <label for="photoMemoryTitle">Title</label>
+                <input
+                    type="text"
+                    id="photoMemoryTitle"
+                    placeholder="Example: Mountain views"
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="photoMemoryLocation">Location</label>
+                <input
+                    type="text"
+                    id="photoMemoryLocation"
+                    placeholder="Example: Munnar"
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="photoMemoryDate">Date</label>
+                <input
+                    type="date"
+                    id="photoMemoryDate"
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="photoMemoryCaption">Caption</label>
+                <textarea
+                    id="photoMemoryCaption"
+                    placeholder="Add a short caption..."
+                ></textarea>
+            </div>
+
+            <div class="modal-actions">
+
+                <button
+                    type="button"
+                    class="secondary-button"
+                    id="cancelPhotoMemoryBtn"
+                >
+                    Cancel
+                </button>
+
+                <button
+                    type="button"
+                    class="primary-button"
+                    id="savePhotoMemoryBtn"
+                >
+                    Save photo
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================================
+         DESTINATION MODAL
+    ========================================== -->
+
+    <div
+        class="modal-overlay hidden"
+        id="destinationModal"
+    >
+
+        <div class="modal-card destination-modal-card">
+
+            <button
+                type="button"
+                class="modal-close destination-modal-close"
+                id="closeDestinationModal"
+            >
+                ×
+            </button>
+
+            <div id="destinationModalContent"></div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================================
+         TOAST
+    ========================================== -->
+
+    <div
+        class="voyara-toast"
+        id="voyaraToast"
+    >
+        <span class="toast-icon">✓</span>
+        <span id="toastMessage">Done</span>
+    </div>
+
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="./app.js"></script>
+
+</body>
+</html>

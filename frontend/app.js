@@ -2503,7 +2503,7 @@ function bindRecommendationsFinal() {
 ============================================================ */
 
 const VOYARA_TOOLKIT_STYLE_ID = "voyaraToolkitStyles";
-const VOYARA_PACKING_KEY = "voyaraPackingChecklist";
+
 
 function voyaraEnsureTripToolkitStyles() {
   if ($(VOYARA_TOOLKIT_STYLE_ID)) return;

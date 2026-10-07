@@ -2311,6 +2311,19 @@ const VOYARA_EXPLORE_DESTINATIONS_FINAL = [
 let voyaraExploreSearchRequest = 0;
 let voyaraForYouResults = [];
 
+const VOYARA_FOR_YOU_SAMPLE_RESULTS = [
+  {id:"sample-goa-baga",name:"Baga Beach",destination:"Goa",category:"Nature & Outdoors",description:"Popular North Goa beach for sunsets, water activities and a lively coastal atmosphere.",rating:null},
+  {id:"sample-goa-basilica",name:"Basilica of Bom Jesus",destination:"Goa",category:"Attractions & Culture",description:"Historic Old Goa landmark known for its Portuguese-era architecture and heritage.",rating:null},
+  {id:"sample-goa-thalassa",name:"Thalassa",destination:"Goa",category:"Food & Cafés",description:"A well-known Goa dining spot with coastal views and a relaxed evening setting.",rating:null},
+  {id:"sample-goa-market",name:"Mapusa Market",destination:"Goa",category:"Shopping & Local Markets",description:"Local market experience for produce, spices, handicrafts and everyday Goan goods.",rating:null},
+  {id:"sample-goa-dudhsagar",name:"Dudhsagar Falls",destination:"Goa",category:"Experiences & Activities",description:"Scenic waterfall experience surrounded by lush Western Ghats landscapes.",rating:null},
+  {id:"sample-kerala-munnar",name:"Munnar Tea Gardens",destination:"Kerala",category:"Nature & Outdoors",description:"Misty tea-covered hills and scenic viewpoints around Munnar.",rating:null},
+  {id:"sample-kerala-fortkochi",name:"Fort Kochi",destination:"Kerala",category:"Attractions & Culture",description:"Historic waterfront neighbourhood with heritage streets and cultural landmarks.",rating:null},
+  {id:"sample-kerala-cafe",name:"Kashi Art Café",destination:"Kerala",category:"Food & Cafés",description:"Art-filled café experience in the heart of Fort Kochi.",rating:null},
+  {id:"sample-kerala-handloom",name:"Kerala Handicrafts",destination:"Kerala",category:"Shopping & Local Markets",description:"Browse traditional Kerala crafts, textiles and locally made souvenirs.",rating:null},
+  {id:"sample-kerala-backwaters",name:"Alleppey Backwaters",destination:"Kerala",category:"Experiences & Activities",description:"Relaxing backwater experience with houseboats and scenic waterways.",rating:null}
+];
+
 function voyaraExploreCard(destination, searched=false) {
   return `<article class="destination-card ${searched ? 'destination-card-searched' : ''}">
     <div class="destination-card-image"><img src="${escapeHtml(destination.image || 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=900&q=85')}" alt="${escapeHtml(destination.name)} travel destination" loading="lazy"></div>
@@ -2448,7 +2461,9 @@ async function searchForYouPlaces() {
   const grid=$("recommendationGrid");
   const note=$("forYouSourceNote");
   if(!destination){
-    grid.innerHTML=`<div class="for-you-empty"><strong>Enter a destination first.</strong><span>For example: Goa, Kashmir, Kerala, Paris or Tokyo.</span></div>`;
+    voyaraForYouResults=VOYARA_FOR_YOU_SAMPLE_RESULTS.slice();
+    if(note)note.textContent="Demo recommendations for Goa and Kerala are available below.";
+    renderForYouResults();
     return;
   }
   grid.innerHTML=`<div class="for-you-loading"><strong>Finding places in ${escapeHtml(destination)}...</strong><span>Searching the selected category and preparing recommendations.</span></div>`;
@@ -2479,8 +2494,13 @@ async function searchForYouPlaces() {
       } catch (_) {}
     }
 
-    voyaraForYouResults=results;
-    if(note) note.textContent=sources.has("Google Places")?"Recommendations are from Google Places. Ratings are shown only when Google supplies them.":"Recommendations are from OpenStreetMap. Ratings are shown only when a real rating is supplied by the source.";
+    if(!results.length && /^(goa|kerala)$/i.test(destination)){
+      voyaraForYouResults=VOYARA_FOR_YOU_SAMPLE_RESULTS.filter(x=>x.destination.toLowerCase()===destination.toLowerCase());
+      if(note)note.textContent="Showing Voyara demo recommendations for this destination.";
+    }else{
+      voyaraForYouResults=results;
+    }
+    if(note && results.length) note.textContent=sources.has("Google Places")?"Recommendations are from Google Places. Ratings are shown only when Google supplies them.":"Recommendations are from OpenStreetMap. Ratings are shown only when a real rating is supplied by the source.";
     renderForYouResults();
   } catch(error) {
     voyaraForYouResults=[];
@@ -2530,7 +2550,7 @@ function voyaraEnsureTripToolkitStyles() {
     .voyara-tool-row{display:flex;gap:8px;margin-top:12px}.voyara-tool-row input{flex:1}
     .voyara-weather-main{display:flex;align-items:center;gap:14px}.voyara-weather-temp{font-size:34px;font-weight:800}.voyara-weather-icon{font-size:34px}
     .voyara-weather-meta{opacity:.7}.voyara-weather-loading{opacity:.65}
-    .voyara-pack-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+    .voyara-pack-add{display:flex;gap:8px;margin-bottom:12px}.voyara-pack-add input{flex:1}.voyara-pack-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
     .voyara-pack-item{display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:12px;background:#f7f3ed}
     .voyara-pack-item input{width:auto}.voyara-pack-item.done span{text-decoration:line-through;opacity:.55}
     .voyara-share-box{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
@@ -2587,12 +2607,20 @@ async function voyaraLoadWeather(){
 }
 
 function voyaraPackingItems(){
-  try{return JSON.parse(localStorage.getItem(VOYARA_PACKING_KEY)||"null")||[
-    {text:"ID / travel documents",done:false},{text:"Phone + charger",done:false},
-    {text:"Clothes",done:false},{text:"Toiletries",done:false},
-    {text:"Medicines",done:false},{text:"Comfortable footwear",done:false},
-    {text:"Power bank",done:false},{text:"Water bottle",done:false}
-  ];}catch(_){return[];}
+  try{return JSON.parse(localStorage.getItem(VOYARA_PACKING_KEY)||"[]")||[];}catch(_){return[];}
+}
+
+function voyaraAddPackingItem(){
+  const input=$("voyaraPackingInput");
+  if(!input)return;
+  const text=input.value.trim();
+  if(!text)return;
+  const items=voyaraPackingItems();
+  items.push({text,done:false});
+  localStorage.setItem(VOYARA_PACKING_KEY,JSON.stringify(items));
+  input.value="";
+  voyaraRenderPacking();
+  input.focus();
 }
 
 function voyaraRenderPacking(){
@@ -2614,8 +2642,8 @@ function voyaraShareTrip(){
 
 function voyaraEnsureTripToolkit(){
   voyaraEnsureTripToolkitStyles();
-  const planner=$("section-planner"), itinerary=$("itineraryContainer");
-  if(!planner||$("voyaraTripToolkit"))return;
+  const planner=$("section-planner"), toolkitSection=$("section-toolkit"), itinerary=$("itineraryContainer");
+  if((!planner&&!toolkitSection)||$("voyaraTripToolkit"))return;
   const mount=document.createElement("div");
   mount.id="voyaraTripToolkit";
   mount.className="voyara-trip-toolkit";
@@ -2627,10 +2655,12 @@ function voyaraEnsureTripToolkit(){
     <div class="voyara-toolkit-grid">
       <section class="voyara-tool-card"><div class="voyara-tool-card-head"><h4>💰 Budget Tracker</h4><button class="voyara-tool-toggle" type="button" data-tool-toggle="budget">−</button></div><div class="voyara-tool-body" data-tool-body="budget"><div class="voyara-budget-stats"><div class="voyara-budget-stat"><span>Budget</span><strong id="voyaraBudgetValue">₹0</strong></div><div class="voyara-budget-stat"><span>Spent</span><strong id="voyaraSpentValue">₹0</strong></div><div class="voyara-budget-stat"><span>Remaining</span><strong id="voyaraRemainingValue">₹0</strong></div></div><div class="voyara-budget-bar"><div class="voyara-budget-fill" id="voyaraBudgetFill"></div></div><div class="voyara-tool-row"><input id="voyaraBudgetInput" type="number" min="0" placeholder="Total budget"><input id="voyaraSpentInput" type="number" min="0" placeholder="Amount spent"></div></div></section>
       <section class="voyara-tool-card"><div class="voyara-tool-card-head"><h4>🌦️ Weather</h4><button class="voyara-tool-toggle" type="button" data-tool-toggle="weather">−</button></div><div class="voyara-tool-body" data-tool-body="weather" id="voyaraWeatherBody"><div class="voyara-weather-loading">Create a trip to check weather.</div></div></section>
-      <section class="voyara-tool-card wide"><div class="voyara-tool-card-head"><h4>🎒 Packing Checklist</h4><button class="voyara-tool-toggle" type="button" data-tool-toggle="packing">−</button></div><div class="voyara-tool-body" data-tool-body="packing"><div class="voyara-pack-list" id="voyaraPackingList"></div></div></section>
+      <section class="voyara-tool-card wide"><div class="voyara-tool-card-head"><h4>🎒 Packing Checklist</h4><button class="voyara-tool-toggle" type="button" data-tool-toggle="packing">−</button></div><div class="voyara-tool-body" data-tool-body="packing"><div class="voyara-pack-add"><input id="voyaraPackingInput" type="text" placeholder="Add your own checklist item..." aria-label="New packing checklist item"><button type="button" class="primary-button" id="voyaraAddPackingBtn">Add</button></div><div class="voyara-pack-list" id="voyaraPackingList"></div></div></section>
       <section class="voyara-tool-card wide"><div class="voyara-tool-card-head"><h4>↗ Share Trip</h4><button class="voyara-tool-toggle" type="button" data-tool-toggle="share">−</button></div><div class="voyara-tool-body" data-tool-body="share"><div class="voyara-share-box"><span>Share your Voyara trip with friends or teammates.</span><button type="button" class="primary-button" id="voyaraShareTripBtn2">Share trip ↗</button></div></div></section>
     </div>`;
-  if(itinerary) itinerary.insertAdjacentElement("afterend",mount); else planner.appendChild(mount);
+  if(toolkitSection) toolkitSection.appendChild(mount);
+  else if(itinerary) itinerary.insertAdjacentElement("afterend",mount);
+  else if(planner) planner.appendChild(mount);
 
   const saved=JSON.parse(localStorage.getItem("voyaraToolkitBudget")||"{}");
   if($("voyaraBudgetInput"))$("voyaraBudgetInput").value=saved.budget||"";
@@ -2638,6 +2668,8 @@ function voyaraEnsureTripToolkit(){
   $("voyaraBudgetInput")?.addEventListener("input",voyaraRenderBudget);
   $("voyaraSpentInput")?.addEventListener("input",voyaraRenderBudget);
   $("voyaraRefreshWeather")?.addEventListener("click",voyaraLoadWeather);
+  $("voyaraAddPackingBtn")?.addEventListener("click",voyaraAddPackingItem);
+  $("voyaraPackingInput")?.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();voyaraAddPackingItem();}});
   $("voyaraShareTripBtn")?.addEventListener("click",voyaraShareTrip);
   $("voyaraShareTripBtn2")?.addEventListener("click",voyaraShareTrip);
   mount.querySelectorAll("[data-tool-toggle]").forEach(btn=>btn.addEventListener("click",()=>{

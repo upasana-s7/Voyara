@@ -25,8 +25,8 @@ load_dotenv(dotenv_path=ENV_FILE, override=True)
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
 GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY", "").strip()
 
-MODEL_NAME = "gemini-3.6-flash"
-FALLBACK_MODELS = ["gemini-3.5-flash-lite"]
+MODEL_NAME = "gemini-3.5-flash-lite"
+FALLBACK_MODELS = ["gemini-3.6-flash"]
 
 
 # ============================================================
@@ -85,7 +85,7 @@ def generate_with_gemini(prompt):
     last_error = None
 
     for model_name in models:
-        for attempt in range(1, 3):
+        for attempt in range(1, 2):
             try:
                 response = gemini_client.models.generate_content(
                     model=model_name,
@@ -132,7 +132,7 @@ def generate_with_gemini(prompt):
                     break
 
                 if attempt < 2:
-                    time.sleep(2 ** attempt)
+                    time.sleep(1)
 
     raise Exception(
         "Gemini could not complete the request right now. "
@@ -927,178 +927,84 @@ def _osm_places_search(
     category,
     query_text
 ):
-    """
-    Lightweight OpenStreetMap fallback.
+    """Fast OpenStreetMap fallback using one Nominatim request per category."""
 
-    Uses Nominatim directly instead of the previous large Overpass query.
-    This keeps the free OSM fallback responsive and avoids long-running
-    public Overpass requests.
-    """
-
-    category_queries = {
-        "Food & Cafés": [
-            "restaurant",
-            "cafe",
-            "bakery",
-            "local food"
-        ],
-        "Attractions & Culture": [
-            "tourist attraction",
-            "museum",
-            "cultural landmark",
-            "historic place"
-        ],
-        "Nature & Outdoors": [
-            "park",
-            "waterfall",
-            "viewpoint",
-            "nature attraction"
-        ],
-        "Experiences & Activities": [
-            "tourist attraction",
-            "adventure activity",
-            "activity",
-            "things to do"
-        ],
-        "Shopping & Local Markets": [
-            "market",
-            "shopping",
-            "local market",
-            "bazaar"
-        ],
-        "all": [
-            "tourist attraction",
-            "restaurant",
-            "cafe",
-            "park",
-            "market"
-        ],
+    category_terms = {
+        "Food & Cafés": "restaurant",
+        "Attractions & Culture": "tourist attraction",
+        "Nature & Outdoors": "park",
+        "Experiences & Activities": "things to do",
+        "Shopping & Local Markets": "market",
+        "all": "tourist attraction",
     }
 
-    terms = category_queries.get(
+    term = query_text or category_terms.get(
         category,
-        category_queries["all"]
+        "tourist attraction"
     )
 
-    if query_text:
-        terms = [query_text]
+    params = urllib.parse.urlencode({
+        "format": "jsonv2",
+        "addressdetails": 1,
+        "limit": 4,
+        "q": f"{term} in {destination}",
+    })
+
+    try:
+        data = _json_request(
+            "https://nominatim.openstreetmap.org/search?" + params,
+            headers={
+                "Accept-Language": "en",
+                "User-Agent": "VoyaraTravelPlanner/1.0",
+            },
+            timeout=5,
+        )
+    except Exception as error:
+        print("OSM SEARCH ERROR:", error)
+        return []
 
     results = []
     seen = set()
 
-    for term in terms:
-        search_query = f"{term} in {destination}"
+    for item in data:
+        name = str(
+            item.get("name")
+            or item.get("display_name", "").split(",")[0]
+            or ""
+        ).strip()
 
-        params = urllib.parse.urlencode({
-            "format": "jsonv2",
-            "addressdetails": 1,
-            "limit": 4,
-            "q": search_query
-        })
-
-        try:
-            data = _json_request(
-                "https://nominatim.openstreetmap.org/search?"
-                + params,
-                headers={
-                    "Accept-Language": "en",
-                    "User-Agent":
-                        "VoyaraTravelPlanner/1.0"
-                },
-                timeout=8
-            )
-        except Exception as error:
-            print(
-                "OSM SEARCH ERROR:",
-                term,
-                error
-            )
+        if not name or name.casefold() in seen:
             continue
 
-        for item in data:
-            name = str(
-                item.get("name")
-                or item.get(
-                    "display_name",
-                    ""
-                ).split(",")[0]
-                or ""
-            ).strip()
+        lat = item.get("lat")
+        lon = item.get("lon")
 
-            if not name:
-                continue
+        if lat is None or lon is None:
+            continue
 
-            key = name.casefold()
+        seen.add(name.casefold())
 
-            if key in seen:
-                continue
+        place_type = item.get("type") or item.get("class") or category
 
-            lat = item.get("lat")
-            lon = item.get("lon")
+        results.append({
+            "id": f"osm-{item.get('osm_type')}-{item.get('osm_id')}",
+            "name": name,
+            "destination": destination,
+            "category": category,
+            "type": str(place_type).replace("_", " "),
+            "address": item.get("display_name") or destination,
+            "lat": lat,
+            "lon": lon,
+            "rating": None,
+            "ratingCount": None,
+            "mapUrl": (
+                "https://www.google.com/maps/search/?api=1&query="
+                + urllib.parse.quote(name + ", " + destination)
+            ),
+            "source": "OpenStreetMap",
+        })
 
-            if lat is None or lon is None:
-                continue
-
-            seen.add(key)
-
-            place_type = (
-                item.get("type")
-                or item.get("class")
-                or category
-            )
-
-            results.append({
-                "id":
-                    f"osm-{item.get('osm_type')}-"
-                    f"{item.get('osm_id')}",
-
-                "name":
-                    name,
-
-                "destination":
-                    destination,
-
-                "category":
-                    category,
-
-                "type":
-                    str(place_type).replace(
-                        "_",
-                        " "
-                    ),
-
-                "address":
-                    item.get(
-                        "display_name"
-                    ) or destination,
-
-                "lat":
-                    lat,
-
-                "lon":
-                    lon,
-
-                "rating":
-                    None,
-
-                "ratingCount":
-                    None,
-
-                "mapUrl":
-                    (
-                        "https://www.google.com/maps/search/"
-                        "?api=1&query="
-                        f"{urllib.parse.quote(name + ', ' + destination)}"
-                    ),
-
-                "source":
-                    "OpenStreetMap",
-            })
-
-            if len(results) >= 4:
-                return results
-
-    return results
+    return results[:4]
 
 
 @app.route(

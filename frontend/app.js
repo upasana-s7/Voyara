@@ -2156,9 +2156,16 @@ async function openExploreDetails(destinationName) {
     const place=places[0]||{};
     let guide={description:`Explore ${destinationName}.`,introduction:`${destinationName} offers a range of travel experiences. Check current local information before travelling.`,bestTime:"Check seasonal weather for your dates.",duration:"Choose a duration based on the places you want to visit.",budget:"Compare transport, accommodation, food and activity costs."};
     try {
-      const r=await fetch(`${API_BASE}/api/destination-guide`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({destination:destinationName,location:place.display_name||"",type:place.type||"place"})});
-      const data=await r.json(); if(r.ok&&data.success) guide={...guide,...data};
-    } catch (_) {}
+      const controller=new AbortController();
+      const timeout=setTimeout(()=>controller.abort(),5000);
+      const r=await fetch(`${API_BASE}/api/destination-guide`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({destination:destinationName,location:place.display_name||"",type:place.type||"place"}),signal:controller.signal});
+      clearTimeout(timeout);
+      const data=await r.json();
+      if(r.ok&&data.success) guide={...guide,...data};
+    } catch (_) {
+      // Do not leave the Explore modal stuck on "Preparing details".
+      // The local fallback below is shown immediately if AI guidance is slow.
+    }
     content.innerHTML=`<div class="destination-modal-image"><img src="https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=1200&q=85" alt="${escapeHtml(destinationName)}"><div><span class="eyebrow">DESTINATION GUIDE</span><h2>${escapeHtml(destinationName)}</h2><p>${escapeHtml(place.display_name||"")}</p></div></div><div class="destination-modal-body"><p>${escapeHtml(guide.introduction||guide.description)}</p><div class="destination-guide-facts"><div><span>Best time</span><strong>${escapeHtml(guide.bestTime)}</strong></div><div><span>Suggested duration</span><strong>${escapeHtml(guide.duration)}</strong></div><div><span>Budget</span><strong>${escapeHtml(guide.budget)}</strong></div></div><div class="destination-modal-actions"><button type="button" class="secondary-button" id="destinationDetailsCloseBtn">Close</button><button type="button" class="primary-button" id="destinationDetailsPlanBtn">Plan this trip →</button></div></div>`;
     $("destinationDetailsCloseBtn")?.addEventListener("click",()=>hideElement(modal));
     $("destinationDetailsPlanBtn")?.addEventListener("click",()=>{hideElement(modal);window.voyaraPlanDestination(destinationName);});

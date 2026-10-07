@@ -1056,6 +1056,19 @@ def _osm_places_search(
             or category
         )
 
+        result_category = category
+        if category == "all":
+            if tags_data.get("amenity") in {"restaurant", "cafe", "fast_food", "food_court", "bar"}:
+                result_category = "Food & Cafés"
+            elif tags_data.get("amenity") == "marketplace" or tags_data.get("shop"):
+                result_category = "Shopping & Local Markets"
+            elif tags_data.get("leisure") in {"park", "garden", "nature_reserve"} or tags_data.get("natural") in {"waterfall", "beach", "peak", "viewpoint"}:
+                result_category = "Nature & Outdoors"
+            elif tags_data.get("tourism") in {"attraction", "museum", "gallery", "artwork", "zoo"}:
+                result_category = "Attractions & Culture"
+            else:
+                result_category = "Experiences & Activities"
+
         address_parts = [
             tags_data.get("addr:street"),
             tags_data.get("addr:city"),
@@ -1071,7 +1084,7 @@ def _osm_places_search(
             "id": f"osm-{item.get('type')}-{item.get('id')}",
             "name": name,
             "destination": destination,
-            "category": category,
+            "category": result_category,
             "type": str(place_type).replace("_", " "),
             "address": address,
             "lat": item_lat,

@@ -2257,7 +2257,7 @@ async function searchForYouPlaces() {
     for(const cat of categories){
       try {
         const controller=new AbortController();
-        const timeout=setTimeout(()=>controller.abort(),7000);
+        const timeout=setTimeout(()=>controller.abort(),10000);
         const response=await fetch(`${API_BASE}/api/places`,{
           method:"POST",
           headers:{"Content-Type":"application/json"},

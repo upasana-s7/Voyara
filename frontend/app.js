@@ -2203,14 +2203,34 @@ async function searchForYouPlaces() {
   const category=$("forYouCategory")?.value||"all";
   const grid=$("recommendationGrid");
   const note=$("forYouSourceNote");
-  if(!destination){grid.innerHTML=`<div class="for-you-empty"><strong>Enter a destination first.</strong><span>For example: Goa, Kashmir, Kerala, Paris or Tokyo.</span></div>`;return;}
+  if(!destination){
+    grid.innerHTML=`<div class="for-you-empty"><strong>Enter a destination first.</strong><span>For example: Goa, Kashmir, Kerala, Paris or Tokyo.</span></div>`;
+    return;
+  }
   grid.innerHTML=`<div class="for-you-loading"><strong>Finding places in ${escapeHtml(destination)}...</strong><span>Searching the selected category and preparing recommendations.</span></div>`;
   if(note)note.textContent="";
   const categories=category==="all"?VOYARA_FOR_YOU_CATEGORIES:[category];
   try {
-    const settled=await Promise.all(categories.map(cat=>fetch(`${API_BASE}/api/places`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({destination,category:cat,query:""})}).then(async r=>({ok:r.ok,data:await r.json()})).catch(()=>({ok:false,data:{}}))));
-    const results=[]; const sources=new Set();
-    settled.forEach((entry,i)=>{if(entry.ok&&entry.data?.success){sources.add(entry.data.source||"");(entry.data.results||[]).forEach(x=>{if(!results.some(r=>String(r.id)===String(x.id)))results.push(x);});}});
+    const results=[];
+    const sources=new Set();
+
+    for(const cat of categories){
+      try {
+        const response=await fetch(`${API_BASE}/api/places`,{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({destination,category:cat,query:""})
+        });
+        let data={};
+        try { data=await response.json(); } catch (_) {}
+        if(!response.ok||!data.success) continue;
+        sources.add(data.source||"");
+        (data.results||[]).forEach(item=>{
+          if(!results.some(r=>String(r.id)===String(item.id))) results.push(item);
+        });
+      } catch (_) {}
+    }
+
     voyaraForYouResults=results;
     if(note) note.textContent=sources.has("Google Places")?"Recommendations are from Google Places. Ratings are shown only when Google supplies them.":"Recommendations are from OpenStreetMap. Ratings are shown only when a real rating is supplied by the source.";
     renderForYouResults();
@@ -2219,7 +2239,6 @@ async function searchForYouPlaces() {
     grid.innerHTML=`<div class="for-you-empty"><strong>Recommendations are temporarily unavailable.</strong><span>Check that the backend is running and try again.</span></div>`;
   }
 }
-
 function bindRecommendationsFinal() {
   const input=$("forYouSearch"), select=$("forYouCategory"), button=$("forYouSearchBtn");
   if(!input||!select||!button)return;

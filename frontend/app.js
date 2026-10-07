@@ -25,6 +25,168 @@ let mapInstance = null;
 
 
 // ============================================================
+// ACCOUNT / AUTHENTICATION
+// Browser-local prototype authentication.
+// ============================================================
+
+const VOYARA_ACCOUNT_KEYS = [
+  "voyaraUserName",
+  "voyaraUserEmail",
+  "voyaraUserPhone",
+  "voyaraUserIdentifier"
+];
+
+const VOYARA_ACCOUNTS_KEY = "voyaraAccountsV2";
+
+function voyaraGetAccounts() {
+  try {
+    return JSON.parse(
+      localStorage.getItem(VOYARA_ACCOUNTS_KEY) || "{}"
+    );
+  } catch (_) {
+    return {};
+  }
+}
+
+function voyaraSaveAccounts(accounts) {
+  localStorage.setItem(
+    VOYARA_ACCOUNTS_KEY,
+    JSON.stringify(accounts)
+  );
+}
+
+function voyaraNormalizeIdentifier(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function voyaraAccountMessage(message) {
+  const existing = $("voyaraAuthMessage");
+  if (existing) {
+    existing.textContent = message;
+    existing.classList.remove("hidden");
+    return;
+  }
+
+  const form = $("nameForm");
+  if (form) {
+    const note = document.createElement("p");
+    note.id = "voyaraAuthMessage";
+    note.className = "voyara-auth-message";
+    note.textContent = message;
+    form.insertAdjacentElement("afterend", note);
+  }
+}
+
+function voyaraLoadAccountData(identifier, name) {
+  const key = voyaraNormalizeIdentifier(identifier);
+  const accounts = voyaraGetAccounts();
+  const account = accounts[key];
+
+  if (account) {
+    localStorage.setItem("voyaraUserName", account.name || name || "Traveller");
+    localStorage.setItem("voyaraUserIdentifier", key);
+    if (account.email) localStorage.setItem("voyaraUserEmail", account.email);
+    if (account.phone) localStorage.setItem("voyaraUserPhone", account.phone);
+  }
+}
+
+function voyaraClearActiveAccountData() {
+  // Keep saved journeys/memories intact; only clear active session fields.
+  VOYARA_ACCOUNT_KEYS.forEach((key) => localStorage.removeItem(key));
+}
+
+function voyaraHandleAuthSubmit(event) {
+  event.preventDefault();
+
+  const mode =
+    document.querySelector(".voyara-auth-tab.active")?.dataset.authMode ||
+    "signup";
+
+  const name = $("nameInput")?.value.trim() || "";
+  const identifier = voyaraNormalizeIdentifier(
+    $("contactInput")?.value || ""
+  );
+  const password = $("passwordInput")?.value || "";
+
+  if (!identifier) {
+    voyaraAccountMessage("Enter your email address or phone number.");
+    $("contactInput")?.focus();
+    return;
+  }
+
+  if (password.length < 6) {
+    voyaraAccountMessage("Password must be at least 6 characters.");
+    $("passwordInput")?.focus();
+    return;
+  }
+
+  if (mode === "signup" && !name) {
+    voyaraAccountMessage("Enter your name to create your account.");
+    $("nameInput")?.focus();
+    return;
+  }
+
+  const accounts = voyaraGetAccounts();
+  const account = accounts[identifier];
+
+  if (mode === "signup") {
+    if (account) {
+      voyaraAccountMessage(
+        "An account already exists with this email or phone number. Choose Log in instead."
+      );
+      return;
+    }
+
+    const isEmail = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(identifier);
+    const newAccount = {
+      name,
+      email: isEmail ? identifier : "",
+      phone: isEmail ? "" : identifier,
+      password,
+      createdAt: new Date().toISOString()
+    };
+
+    accounts[identifier] = newAccount;
+    voyaraSaveAccounts(accounts);
+
+    localStorage.setItem("voyaraUserName", name);
+    localStorage.setItem("voyaraUserIdentifier", identifier);
+    if (isEmail) {
+      localStorage.setItem("voyaraUserEmail", identifier);
+    } else {
+      localStorage.setItem("voyaraUserPhone", identifier);
+    }
+
+    voyaraAccountMessage("");
+    showApplication();
+    return;
+  }
+
+  if (!account || account.password !== password) {
+    voyaraAccountMessage("Incorrect email/phone or password. Please try again.");
+    return;
+  }
+
+  localStorage.setItem(
+    "voyaraUserName",
+    account.name || "Traveller"
+  );
+  localStorage.setItem("voyaraUserIdentifier", identifier);
+
+  if (account.email) {
+    localStorage.setItem("voyaraUserEmail", account.email);
+  }
+  if (account.phone) {
+    localStorage.setItem("voyaraUserPhone", account.phone);
+  }
+
+  voyaraAccountMessage("");
+  showApplication();
+}
+
+
+
+// ============================================================
 // DOM HELPERS
 // ============================================================
 
@@ -120,8 +282,9 @@ function initializeVoyara() {
   updateHomeStats();
 
   const savedName = localStorage.getItem("voyaraUserName");
+  const activeIdentifier = localStorage.getItem("voyaraUserIdentifier");
 
-  if (savedName) {
+  if (savedName && activeIdentifier) {
     showApplication();
   } else {
     showWelcomeScreen();
@@ -136,49 +299,68 @@ function initializeVoyara() {
 function bindWelcomeScreen() {
   const nameForm = $("nameForm");
 
-  if (nameForm) {
-    nameForm.addEventListener("submit", (event) => {
-      event.preventDefault();
-
-      const nameInput = $("nameInput");
-      const name = nameInput
-        ? nameInput.value.trim()
-        : "";
-
-      if (!name) {
-        alert("Please enter your name.");
-        return;
-      }
-
-      const emailInput = $("emailInput");
-      const email = emailInput ? emailInput.value.trim().toLowerCase() : "";
-      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        alert("Please enter a valid email address.");
-        return;
-      }
-      if (typeof voyaraLoadAccountData === "function") voyaraLoadAccountData(email, name);
-      localStorage.setItem("voyaraUserName", name);
-      if (email) localStorage.setItem("voyaraUserEmail", email);
-      showApplication();
-    });
+  if (nameForm && !nameForm.dataset.authBound) {
+    nameForm.dataset.authBound = "true";
+    nameForm.addEventListener("submit", voyaraHandleAuthSubmit);
   }
+
+  const tabs = document.querySelectorAll(".voyara-auth-tab");
+  tabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      tabs.forEach((item) => {
+        const active = item === tab;
+        item.classList.toggle("active", active);
+        item.setAttribute("aria-selected", active ? "true" : "false");
+      });
+
+      const signup = tab.dataset.authMode === "signup";
+      const nameField = $("signupNameField");
+      const submit = $("authSubmitBtn");
+      const password = $("passwordInput");
+
+      if (nameField) {
+        nameField.classList.toggle("hidden", !signup);
+      }
+      if (submit) {
+        submit.innerHTML = signup
+          ? 'Create my account <span>→</span>'
+          : 'Log in <span>→</span>';
+      }
+      if (password) {
+        password.autocomplete = signup ? "new-password" : "current-password";
+      }
+
+      const message = $("voyaraAuthMessage");
+      if (message) message.classList.add("hidden");
+    });
+  });
 
   const googleSignInButton = $("googleSignInBtn");
 
-  if (googleSignInButton) {
+  if (googleSignInButton && !googleSignInButton.dataset.authBound) {
+    googleSignInButton.dataset.authBound = "true";
     googleSignInButton.addEventListener("click", () => {
-      const name = prompt(
-        "Enter your name to continue with Voyara:"
-      );
+      const name = prompt("Enter your name to continue with Voyara:");
+      if (!name || !name.trim()) return;
 
-      if (name && name.trim()) {
-        localStorage.setItem(
-          "voyaraUserName",
-          name.trim()
-        );
+      const identifier = "google:" + name.trim().toLowerCase();
+      const accounts = voyaraGetAccounts();
 
-        showApplication();
+      if (!accounts[identifier]) {
+        accounts[identifier] = {
+          name: name.trim(),
+          email: "",
+          phone: "",
+          password: "",
+          provider: "google",
+          createdAt: new Date().toISOString()
+        };
+        voyaraSaveAccounts(accounts);
       }
+
+      localStorage.setItem("voyaraUserName", name.trim());
+      localStorage.setItem("voyaraUserIdentifier", identifier);
+      showApplication();
     });
   }
 }

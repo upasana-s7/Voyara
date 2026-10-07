@@ -927,116 +927,223 @@ def _osm_places_search(
     category,
     query_text
 ):
-    """Fast and resilient OpenStreetMap place search.
-
-    Keep the number of Nominatim requests low because the public
-    service is rate-limited. One focused search is followed by one
-    broad fallback, rather than several sequential category requests.
+    """Reliable POI search using one geocode request and one scoped
+    Overpass request, with Nominatim as a lightweight fallback.
     """
 
-    category_queries = {
-        "Food & Cafés": "restaurant cafe",
-        "Attractions & Culture": "tourist attraction museum",
-        "Nature & Outdoors": "park nature",
-        "Experiences & Activities": "tourist attraction",
-        "Shopping & Local Markets": "market shopping",
-        "all": "tourist attraction",
+    category_tags = {
+        "Food & Cafés": [
+            '"amenity"~"restaurant|cafe|fast_food|food_court|bar"'
+        ],
+        "Attractions & Culture": [
+            '"tourism"~"attraction|museum|gallery|artwork|zoo"'
+        ],
+        "Nature & Outdoors": [
+            '"leisure"~"park|nature_reserve|garden"',
+            '"natural"~"waterfall|beach|peak|viewpoint"'
+        ],
+        "Experiences & Activities": [
+            '"tourism"~"attraction|theme_park|viewpoint"',
+            '"leisure"~"sports_centre|water_park|stadium"'
+        ],
+        "Shopping & Local Markets": [
+            '"shop"~"supermarket|mall|department_store|gift|clothes|shoes"',
+            '"amenity"="marketplace"'
+        ],
+        "all": [
+            '"tourism"~"attraction|museum|gallery"',
+            '"amenity"~"restaurant|cafe|marketplace"',
+            '"leisure"~"park|garden"'
+        ],
     }
 
-    query = str(query_text or "").strip()
-    if not query:
-        query = category_queries.get(
-            category,
-            "tourist attraction"
-        )
-
-    def search_nominatim(search_query, limit=8):
+    def geocode():
         params = urllib.parse.urlencode({
             "format": "jsonv2",
             "addressdetails": 1,
-            "limit": limit,
-            "q": search_query,
+            "limit": 1,
+            "q": destination,
         })
-
         return _json_request(
             "https://nominatim.openstreetmap.org/search?" + params,
             headers={
                 "Accept-Language": "en",
                 "User-Agent": "VoyaraTravelPlanner/1.0",
             },
-            timeout=6,
+            timeout=7,
         )
+
+    try:
+        places = geocode()
+        if not places:
+            return []
+        center = places[0]
+        lat = float(center["lat"])
+        lon = float(center["lon"])
+    except Exception as error:
+        print("OSM GEOCODE ERROR:", error)
+        return []
+
+    tags = category_tags.get(category, category_tags["all"])
+    query = str(query_text or "").strip()
+
+    if query:
+        # Keep arbitrary user searches useful without trusting the text
+        # as an Overpass expression.
+        search_text = query.replace('"', "").replace("\\", " ")[:80]
+        tags = [
+            f'"name"~"{search_text}",i',
+            f'"amenity"~"restaurant|cafe|marketplace"',
+            f'"tourism"~"attraction|museum|gallery"',
+            f'"leisure"~"park|garden"',
+        ]
+
+    clauses = []
+    for tag in tags:
+        for element in ("node", "way", "relation"):
+            clauses.append(
+                f"{element}(around:12000,{lat},{lon})[{tag}];"
+            )
+
+    overpass_query = (
+        "[out:json][timeout:8];("
+        + "".join(clauses)
+        + ");out center tags 12;"
+    )
+
+    try:
+        payload = urllib.parse.urlencode({
+            "data": overpass_query
+        })
+        data = _json_request(
+            "https://overpass-api.de/api/interpreter?" + payload,
+            headers={
+                "User-Agent": "VoyaraTravelPlanner/1.0",
+            },
+            timeout=12,
+        )
+        elements = data.get("elements", [])
+    except Exception as error:
+        print("OVERPASS SEARCH ERROR:", error)
+        elements = []
 
     results = []
     seen = set()
 
-    # First focused search.
-    try:
-        data = search_nominatim(
-            f"{query} in {destination}",
-            limit=8
-        )
-    except Exception as error:
-        print("OSM FOCUSED SEARCH ERROR:", error)
-        data = []
+    for item in elements:
+        tags_data = item.get("tags") or {}
+        name = str(tags_data.get("name") or "").strip()
+        if not name:
+            continue
 
-    # If the category search is empty, use the destination itself as a
-    # broad fallback. This keeps valid destinations from producing a
-    # completely blank For You section.
-    if not data:
-        try:
-            data = search_nominatim(destination, limit=8)
-        except Exception as error:
-            print("OSM BROAD SEARCH ERROR:", error)
-            data = []
-
-    for item in data:
-        name = str(
-            item.get("name")
-            or item.get("display_name", "").split(",")[0]
-            or ""
-        ).strip()
-
-        lat = item.get("lat")
-        lon = item.get("lon")
-
-        if not name or lat is None or lon is None:
+        center_data = item.get("center") or {}
+        item_lat = item.get("lat", center_data.get("lat"))
+        item_lon = item.get("lon", center_data.get("lon"))
+        if item_lat is None or item_lon is None:
             continue
 
         key = name.casefold()
         if key in seen:
             continue
-
         seen.add(key)
 
         place_type = (
-            item.get("type")
-            or item.get("class")
+            tags_data.get("amenity")
+            or tags_data.get("tourism")
+            or tags_data.get("leisure")
+            or tags_data.get("shop")
+            or tags_data.get("natural")
             or category
         )
 
+        address_parts = [
+            tags_data.get("addr:street"),
+            tags_data.get("addr:city"),
+            tags_data.get("addr:state"),
+        ]
+        address = ", ".join(
+            str(part).strip()
+            for part in address_parts
+            if part
+        ) or destination
+
         results.append({
-            "id": f"osm-{item.get('osm_type')}-{item.get('osm_id')}",
+            "id": f"osm-{item.get('type')}-{item.get('id')}",
             "name": name,
             "destination": destination,
             "category": category,
             "type": str(place_type).replace("_", " "),
-            "address": item.get("display_name") or destination,
-            "lat": lat,
-            "lon": lon,
+            "address": address,
+            "lat": item_lat,
+            "lon": item_lon,
             "rating": None,
             "ratingCount": None,
             "mapUrl": (
                 "https://www.google.com/maps/search/?api=1&query="
-                + urllib.parse.quote(
-                    name + ", " + destination
-                )
+                + urllib.parse.quote(name + ", " + destination)
             ),
             "source": "OpenStreetMap",
         })
 
         if len(results) >= 4:
             break
+
+    if results:
+        return results[:4]
+
+    # Last-resort Nominatim fallback. This is intentionally only one
+    # request so a temporary Overpass issue cannot make the UI hang.
+    try:
+        fallback_query = (
+            f"{query} in {destination}"
+            if query
+            else f"{category} in {destination}"
+        )
+        params = urllib.parse.urlencode({
+            "format": "jsonv2",
+            "addressdetails": 1,
+            "limit": 6,
+            "q": fallback_query,
+        })
+        fallback = _json_request(
+            "https://nominatim.openstreetmap.org/search?" + params,
+            headers={
+                "Accept-Language": "en",
+                "User-Agent": "VoyaraTravelPlanner/1.0",
+            },
+            timeout=7,
+        )
+        for item in fallback:
+            name = str(
+                item.get("name")
+                or item.get("display_name", "").split(",")[0]
+                or ""
+            ).strip()
+            if not name:
+                continue
+            results.append({
+                "id": f"osm-{item.get('osm_type')}-{item.get('osm_id')}",
+                "name": name,
+                "destination": destination,
+                "category": category,
+                "type": str(
+                    item.get("type") or item.get("class") or category
+                ).replace("_", " "),
+                "address": item.get("display_name") or destination,
+                "lat": item.get("lat"),
+                "lon": item.get("lon"),
+                "rating": None,
+                "ratingCount": None,
+                "mapUrl": (
+                    "https://www.google.com/maps/search/?api=1&query="
+                    + urllib.parse.quote(name + ", " + destination)
+                ),
+                "source": "OpenStreetMap",
+            })
+            if len(results) >= 4:
+                break
+    except Exception as error:
+        print("OSM FALLBACK ERROR:", error)
 
     return results[:4]
 

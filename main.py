@@ -927,192 +927,176 @@ def _osm_places_search(
     category,
     query_text
 ):
-    place = _geocode_destination(
-        destination
-    )
+    """
+    Lightweight OpenStreetMap fallback.
 
-    lat = float(place["lat"])
-    lon = float(place["lon"])
+    Uses Nominatim directly instead of the previous large Overpass query.
+    This keeps the free OSM fallback responsive and avoids long-running
+    public Overpass requests.
+    """
 
-    filters = {
+    category_queries = {
         "Food & Cafés": [
-            '["amenity"~"restaurant|cafe|fast_food|food_court|bar"]',
-            '["shop"~"bakery|pastry|confectionery|deli"]'
+            "restaurant",
+            "cafe",
+            "bakery",
+            "local food"
         ],
-
         "Attractions & Culture": [
-            '["tourism"~"attraction|museum|gallery|zoo|theme_park"]',
-            '["historic"]',
-            '["amenity"="place_of_worship"]'
+            "tourist attraction",
+            "museum",
+            "cultural landmark",
+            "historic place"
         ],
-
         "Nature & Outdoors": [
-            '["natural"~"beach|waterfall|wood|peak"]',
-            '["leisure"~"park|nature_reserve|garden"]',
-            '["tourism"="viewpoint"]'
+            "park",
+            "waterfall",
+            "viewpoint",
+            "nature attraction"
         ],
-
         "Experiences & Activities": [
-            '["tourism"~"theme_park|zoo|attraction"]',
-            '["leisure"~"sports_centre|water_park|golf_course|marina"]',
-            '["sport"]'
+            "tourist attraction",
+            "adventure activity",
+            "activity",
+            "things to do"
         ],
-
         "Shopping & Local Markets": [
-            '["shop"]',
-            '["amenity"="marketplace"]'
+            "market",
+            "shopping",
+            "local market",
+            "bazaar"
+        ],
+        "all": [
+            "tourist attraction",
+            "restaurant",
+            "cafe",
+            "park",
+            "market"
         ],
     }
 
-    selected = filters.get(
+    terms = category_queries.get(
         category,
-        sum(filters.values(), [])
+        category_queries["all"]
     )
 
-    blocks = "".join(
-        f"nwr{rule}(around:12000,{lat},{lon});"
-        for rule in selected
-    )
-
-    query = (
-        f"[out:json][timeout:20];"
-        f"({blocks});"
-        f"out center tags 80;"
-    )
-
-    encoded = urllib.parse.urlencode({
-        "data": query
-    }).encode("utf-8")
-
-    req = urllib.request.Request(
-        "https://overpass-api.de/api/interpreter",
-        data=encoded,
-        headers={
-            "User-Agent":
-                "VoyaraTravelPlanner/1.0 (local prototype)",
-            "Content-Type":
-                "application/x-www-form-urlencoded"
-        },
-        method="POST"
-    )
-
-    with urllib.request.urlopen(
-        req,
-        timeout=24
-    ) as response:
-        data = json.loads(
-            response.read().decode("utf-8")
-        )
+    if query_text:
+        terms = [query_text]
 
     results = []
     seen = set()
 
-    for item in data.get(
-        "elements",
-        []
-    ):
-        tags = item.get("tags") or {}
+    for term in terms:
+        search_query = f"{term} in {destination}"
 
-        name = str(
-            tags.get("name")
-            or tags.get("brand")
-            or ""
-        ).strip()
-
-        if not name or name.casefold() in seen:
-            continue
-
-        center = item.get("center") or {}
-
-        coords = {
-            "lat": item.get(
-                "lat",
-                center.get("lat")
-            ),
-            "lon": item.get(
-                "lon",
-                center.get("lon")
-            )
-        }
-
-        if (
-            coords["lat"] is None
-            or
-            coords["lon"] is None
-        ):
-            continue
-
-        seen.add(
-            name.casefold()
-        )
-
-        place_type = next(
-            (
-                tags.get(key)
-                for key in (
-                    "amenity",
-                    "tourism",
-                    "shop",
-                    "leisure",
-                    "historic",
-                    "natural"
-                )
-                if tags.get(key)
-            ),
-            "Local place"
-        )
-
-        results.append({
-            "id":
-                f"osm-{item.get('type')}-{item.get('id')}",
-
-            "name":
-                name,
-
-            "destination":
-                destination,
-
-            "category":
-                category,
-
-            "type":
-                str(place_type).replace(
-                    "_",
-                    " "
-                ),
-
-            "address":
-                tags.get("addr:street")
-                or tags.get("addr:suburb")
-                or tags.get("addr:city")
-                or place.get(
-                    "name",
-                    destination
-                ),
-
-            "lat":
-                coords["lat"],
-
-            "lon":
-                coords["lon"],
-
-            "rating":
-                None,
-
-            "ratingCount":
-                None,
-
-            "mapUrl":
-                f"https://www.google.com/maps/search/"
-                f"?api=1&query="
-                f"{urllib.parse.quote(name + ', ' + destination)}",
-
-            "source":
-                "OpenStreetMap",
+        params = urllib.parse.urlencode({
+            "format": "jsonv2",
+            "addressdetails": 1,
+            "limit": 4,
+            "q": search_query
         })
 
-        if len(results) >= 4:
-            break
+        try:
+            data = _json_request(
+                "https://nominatim.openstreetmap.org/search?"
+                + params,
+                headers={
+                    "Accept-Language": "en",
+                    "User-Agent":
+                        "VoyaraTravelPlanner/1.0"
+                },
+                timeout=8
+            )
+        except Exception as error:
+            print(
+                "OSM SEARCH ERROR:",
+                term,
+                error
+            )
+            continue
+
+        for item in data:
+            name = str(
+                item.get("name")
+                or item.get(
+                    "display_name",
+                    ""
+                ).split(",")[0]
+                or ""
+            ).strip()
+
+            if not name:
+                continue
+
+            key = name.casefold()
+
+            if key in seen:
+                continue
+
+            lat = item.get("lat")
+            lon = item.get("lon")
+
+            if lat is None or lon is None:
+                continue
+
+            seen.add(key)
+
+            place_type = (
+                item.get("type")
+                or item.get("class")
+                or category
+            )
+
+            results.append({
+                "id":
+                    f"osm-{item.get('osm_type')}-"
+                    f"{item.get('osm_id')}",
+
+                "name":
+                    name,
+
+                "destination":
+                    destination,
+
+                "category":
+                    category,
+
+                "type":
+                    str(place_type).replace(
+                        "_",
+                        " "
+                    ),
+
+                "address":
+                    item.get(
+                        "display_name"
+                    ) or destination,
+
+                "lat":
+                    lat,
+
+                "lon":
+                    lon,
+
+                "rating":
+                    None,
+
+                "ratingCount":
+                    None,
+
+                "mapUrl":
+                    (
+                        "https://www.google.com/maps/search/"
+                        "?api=1&query="
+                        f"{urllib.parse.quote(name + ', ' + destination)}"
+                    ),
+
+                "source":
+                    "OpenStreetMap",
+            })
+
+            if len(results) >= 4:
+                return results
 
     return results
 

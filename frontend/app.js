@@ -457,33 +457,60 @@ async function createItinerary() {
   }
 
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 45000);
+    let result = null;
+    let lastError = null;
 
-    const response = await fetch(
-      `${API_BASE}/api/plan`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          message: prompt,
-          ...data
-        }),
-        signal: controller.signal
+    // Render can take a moment to wake the free backend. Give the first
+    // request enough time, then retry once instead of immediately showing
+    // "Failed to fetch".
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 90000);
+
+      try {
+        const response = await fetch(
+          `${API_BASE}/api/plan`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              message: prompt,
+              ...data
+            }),
+            signal: controller.signal
+          }
+        );
+
+        clearTimeout(timeout);
+        const dataResult = await response.json();
+
+        if (!response.ok || !dataResult.success) {
+          throw new Error(
+            dataResult.error ||
+            "Unable to create the itinerary."
+          );
+        }
+
+        result = dataResult;
+        break;
+      } catch (error) {
+        clearTimeout(timeout);
+        lastError = error;
+
+        if (attempt === 1) {
+          if (plannerStatus) {
+            plannerStatus.textContent =
+              "Waking Voyara's travel engine and trying again...";
+          }
+          await new Promise(resolve => setTimeout(resolve, 1500));
+        }
       }
-    );
+    }
 
-    clearTimeout(timeout);
-
-    const result = await response.json();
-
-    if (!response.ok || !result.success) {
-      throw new Error(
-        result.error ||
-        "Unable to create the itinerary."
-      );
+    if (!result) {
+      throw lastError || new Error("Unable to reach the Voyara backend.");
     }
 
     currentItinerary = result.itinerary || "";

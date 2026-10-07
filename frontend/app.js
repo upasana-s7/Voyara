@@ -312,6 +312,17 @@ function bindWelcomeScreen() {
     nameForm.addEventListener("submit", voyaraHandleAuthSubmit);
   }
 
+  // Handle the account button directly as well, so browser form behavior
+  // cannot prevent the prototype auth flow from running.
+  const authSubmitButton = $("authSubmitBtn");
+  if (authSubmitButton && !authSubmitButton.dataset.authClickBound) {
+    authSubmitButton.dataset.authClickBound = "true";
+    authSubmitButton.addEventListener("click", (event) => {
+      event.preventDefault();
+      voyaraHandleAuthSubmit(event);
+    });
+  }
+
   const tabs = document.querySelectorAll(".voyara-auth-tab");
   tabs.forEach((tab) => {
     tab.addEventListener("click", () => {

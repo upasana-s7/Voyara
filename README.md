@@ -1,127 +1,142 @@
-Voyara 🌍
+# ✈️ Voyara
 
-Voyara is an AI-powered travel planning assistant that helps travellers turn trip preferences into practical, personalised itineraries.
+### AI-Powered Travel Planning Assistant
 
-It combines Google Gemini, a Flask backend, and a responsive web interface to help users plan trips, explore destinations, discover places, and refine itineraries.
+**Voyara** is an AI-powered travel planning assistant that turns your destination, budget, duration, travel preferences, and starting location into a practical, personalised trip plan.
 
-✨ Features
+It combines **Google Gemini**, a **Flask backend**, interactive maps, destination discovery, and a responsive web interface into one travel-planning experience.
 
-🤖 AI Trip Planning
+---
 
-Generate personalised itineraries from destination, duration, budget, traveller count, starting location, travel month, and preferences.
+## 🌍 Live Demo
 
-Supports day-by-day and shorter time-block plans.
+🚀 **[Try Voyara Live](https://voyara-frontend.onrender.com)**
 
-Produces concise, practical recommendations.
+📂 **[View Source Code](https://github.com/upasana-s7/Voyara)**
 
-🔄 Modify & Regenerate
+---
 
-Modify an existing itinerary using a natural-language request.
+## ✨ Features
 
-Generate an alternative itinerary while keeping the original trip requirements.
+### 🤖 AI Trip Planning
+- Generate personalised day-by-day itineraries.
+- Plan trips using destination, duration, budget, traveller count, starting location, travel month, and preferences.
+- Create practical time-block plans for shorter trips.
+- Get concise, travel-focused recommendations.
 
-🗺️ Explore Destinations
+### 🔄 Modify & Regenerate
+- Modify an existing itinerary using natural-language instructions.
+- Regenerate an alternative itinerary while keeping the original trip requirements.
+- Refine your trip without starting from scratch.
 
-Search destinations using OpenStreetMap/Nominatim.
+### 🗺️ Explore Destinations
+- Search destinations using OpenStreetMap/Nominatim.
+- Explore locations on an interactive **Leaflet** map.
+- Open destination details with AI-generated travel guidance.
+- Start planning directly from an explored destination.
 
-View destinations on an interactive Leaflet map.
+### 📍 For You Recommendations
+Discover places based on your interests and selected category:
 
-Open destination details and get AI-generated travel guidance.
+- 🍴 Food & Cafés
+- 🏛️ Attractions & Culture
+- 🌿 Nature & Outdoors
+- 🎯 Experiences & Activities
+- 🛍️ Shopping & Local Markets
 
-Start planning directly from a destination.
+Voyara supports Google Places when configured and uses an OpenStreetMap-based fallback for place discovery.
 
-📍 For You Recommendations
+### 💬 Voyara Assistant
+An integrated AI travel assistant that can help with:
+- Trip planning
+- Budgeting
+- Packing
+- Destination questions
+- Travel guidance
+- App guidance
+- Travel safety
 
-Discover places by category:
+The assistant also keeps recent conversation context during a session.
 
-Food & Cafés
+### 💾 Save & Manage Trips
+- Save selected travel data locally in the browser.
+- Keep generated trip information available for later use.
+- Print itineraries in a PDF-friendly format.
 
-Attractions & Culture
+### 📱 Progressive Web App
+- PWA support with a service worker.
+- Responsive interface for different screen sizes.
+- Browser Local Storage for selected travel data.
 
-Nature & Outdoors
+---
 
-Experiences & Activities
+## 🧠 AI & Backend
 
-Shopping & Local Markets
+Voyara uses the **Google Gemini API** through the \`google-genai\` Python SDK.
 
-Google Places is used when configured, with an OpenStreetMap-based fallback.
+The Flask backend provides APIs for:
 
-💬 Voyara Assistant
+- ✈️ Trip planning
+- 🔄 Itinerary modification
+- ♻️ Itinerary regeneration
+- 📍 Destination guides
+- 💬 AI assistant chat
+- 🗺️ Place discovery
+- ❤️ Health/status checks
 
-Built-in AI travel assistant for planning, budgeting, packing, destinations, app guidance, and travel safety.
+The backend also includes retry and fallback handling for temporary Gemini API failures.
 
-Keeps recent conversation context during a session.
+---
 
-📱 PWA & Local Storage
+## 🛠️ Tech Stack
 
-Progressive Web App support with a service worker.
+### Frontend
+- HTML5
+- CSS3
+- JavaScript
+- Leaflet.js
+- Progressive Web App APIs
+- Browser Local Storage
 
-Saves selected travel data locally in the browser.
+### Backend
+- Python
+- Flask
+- Flask-CORS
+- Google GenAI SDK
+- python-dotenv
 
-Includes itinerary printing/PDF-friendly output.
+### APIs & Services
+- Google Gemini
+- Google Places API *(when configured)*
+- OpenStreetMap / Nominatim
+- Leaflet
 
-🧠 AI & Backend
+### Deployment
+- **Render** — frontend & backend hosting
 
-Voyara uses the Google Gemini API through the google-genai Python SDK.
+---
 
-The Flask backend provides API endpoints for:
+## 🏗️ How It Works
 
-Trip planning
+~~~text
+User Preferences
+      ↓
+Voyara Frontend
+      ↓
+Flask Backend
+      ↓
+Google Gemini + Location Services
+      ↓
+Personalised Travel Results
+      ↓
+Interactive Itinerary & Destination Experience
+~~~
 
-Itinerary modification
+---
 
-Itinerary regeneration
+## 📁 Project Structure
 
-Destination guides
-
-AI assistant chat
-
-Place discovery
-
-Health/status checks
-
-The backend also includes retry/fallback handling for temporary Gemini API failures.
-
-🛠️ Tech Stack
-
-Frontend
-
-HTML5
-
-CSS3
-
-JavaScript
-
-Leaflet.js
-
-Progressive Web App APIs
-
-Browser Local Storage
-
-Backend
-
-Python
-
-Flask
-
-Flask-CORS
-
-Google GenAI SDK
-
-python-dotenv
-
-APIs / Services
-
-Google Gemini
-
-Google Places API (when configured)
-
-OpenStreetMap / Nominatim
-
-Leaflet
-
-📁 Project Structure
-
+~~~text
 Voyara/
 ├── frontend/
 │   ├── index.html
@@ -132,96 +147,147 @@ Voyara/
 ├── requirements.txt
 ├── .gitignore
 └── README.md
+~~~
 
-⚙️ Run Locally
+---
 
-1. Clone the repository
+## ⚙️ Run Locally
 
+### 1. Clone the repository
+
+~~~bash
 git clone https://github.com/upasana-s7/Voyara.git
 cd Voyara
+~~~
 
-2. Create a virtual environment
+### 2. Create a virtual environment
 
-Windows PowerShell:
+**Windows PowerShell:**
 
+~~~powershell
 python -m venv .venv
-.\.venv\Scripts\Activate.ps1
+.\\.venv\\Scripts\\Activate.ps1
+~~~
 
-3. Install dependencies
+### 3. Install dependencies
 
+~~~bash
 pip install -r requirements.txt
+~~~
 
-4. Configure environment variables
+### 4. Configure environment variables
 
-Create a .env file in the project root:
+Create a \`.env\` file in the project root:
 
+~~~env
 GEMINI_API_KEY=your_gemini_api_key
 GOOGLE_MAPS_API_KEY=your_google_maps_api_key
+~~~
 
-Never commit real API keys to GitHub.
+> **Never commit real API keys to GitHub.**
 
-5. Start the backend
+### 5. Start the backend
 
+~~~bash
 python main.py
+~~~
 
-The Flask backend runs on http://127.0.0.1:5000.
+The Flask backend runs locally on:
 
-6. Open the frontend
+~~~text
+http://127.0.0.1:5000
+~~~
 
-Open frontend/index.html in a browser.
+### 6. Open the frontend
 
-For complete AI functionality, keep the Flask backend running while using the frontend.
+Open:
 
-🔐 Environment Variables
+~~~text
+frontend/index.html
+~~~
 
-Variable
+For complete AI functionality during local development, keep the Flask backend running.
 
-Purpose
+---
 
-GEMINI_API_KEY
+## 🔐 Environment Variables
 
-Required for Gemini-powered itinerary generation, modification, regeneration, destination guidance, and assistant chat
+| Variable | Purpose |
+|---|---|
+| \`GEMINI_API_KEY\` | Required for Gemini-powered itinerary generation, modification, regeneration, destination guidance, and assistant chat |
+| \`GOOGLE_MAPS_API_KEY\` | Optional; enables Google Places-based recommendations when configured |
 
-GOOGLE_MAPS_API_KEY
+Voyara uses an OpenStreetMap-based fallback for destination and place discovery where applicable.
 
-Optional; enables Google Places-based recommendations when configured
+---
 
-The application also has an OpenStreetMap-based fallback for destination and place discovery where applicable.
+## 🚀 Deployment
 
-⚠️ Deployment Note
+Voyara is deployed as two connected services on **Render**:
 
-The current frontend communicates with the Flask backend at http://127.0.0.1:5000, which is intended for local development.
+**Frontend**
 
-For public deployment, host the Flask backend on a server and change the frontend API base URL to the deployed backend URL. API keys should remain server-side and should never be exposed in frontend code.
+\`https://voyara-frontend.onrender.com\`
 
-🎯 Project Highlights
+**Backend**
 
-Voyara combines:
+\`https://voyara-backend-cwik.onrender.com\`
 
-Personalised itinerary generation
+The frontend communicates with the deployed Flask backend through the configured API base URL.
 
-Natural-language itinerary editing
+API keys remain server-side and are not exposed in the frontend.
 
-Destination discovery
+---
 
-Interactive maps
+## 🎯 Project Highlights
 
-Place recommendations
+Voyara brings multiple travel-planning tasks together in one application:
 
-AI travel assistance
+**Personalised Planning**  
+Generate itineraries around real trip constraints and preferences.
 
-Local browser storage
+**AI-Powered Refinement**  
+Modify and regenerate plans using natural language.
 
-PWA functionality
+**Destination Discovery**  
+Explore destinations, places, and attractions through an interactive map.
 
-The goal is to provide a single travel-planning experience instead of requiring users to switch between multiple tools for itinerary creation, destination research, and trip refinement.
+**Smart Recommendations**  
+Discover food, attractions, nature, experiences, and shopping based on category.
 
-👩‍💻 Author
+**AI Travel Assistance**  
+Ask questions and get travel-focused guidance inside the application.
 
-Upasana S
+**Offline-Friendly Data**  
+Use browser storage to retain selected travel information.
 
-GitHub: https://github.com/upasana-s7
+---
 
-📌 Project Status
+## 💡 Why Voyara?
 
-Voyara is a completed personal AI travel-planning project and is available as a source-code project on GitHub.
+Planning a trip often means switching between multiple tools for:
+
+- Finding destinations
+- Researching places
+- Building an itinerary
+- Checking activities
+- Adjusting plans
+- Getting travel advice
+
+**Voyara brings these steps together into a single AI-powered travel experience.**
+
+---
+
+## 👩‍💻 Author
+
+### Upasana S
+
+🔗 **GitHub:** https://github.com/upasana-s7
+
+---
+
+## 📌 Project Status
+
+**Completed personal AI travel-planning project.**
+
+Voyara is available as an open-source project on GitHub with a live deployed demo.

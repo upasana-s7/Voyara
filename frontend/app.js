@@ -2313,15 +2313,36 @@ let voyaraForYouResults = [];
 
 const VOYARA_FOR_YOU_SAMPLE_RESULTS = [
   {id:"sample-goa-baga",name:"Baga Beach",destination:"Goa",category:"Nature & Outdoors",description:"Popular North Goa beach for sunsets, water activities and a lively coastal atmosphere.",rating:null},
+  {id:"sample-goa-palolem",name:"Palolem Beach",destination:"Goa",category:"Nature & Outdoors",description:"A scenic South Goa beach known for its calm waters, palm-lined shore and relaxed atmosphere.",rating:null},
+  {id:"sample-goa-dudhsagar-nature",name:"Dudhsagar Falls",destination:"Goa",category:"Nature & Outdoors",description:"A spectacular waterfall surrounded by lush Western Ghats scenery.",rating:null},
   {id:"sample-goa-basilica",name:"Basilica of Bom Jesus",destination:"Goa",category:"Attractions & Culture",description:"Historic Old Goa landmark known for its Portuguese-era architecture and heritage.",rating:null},
+  {id:"sample-goa-se-cathedral",name:"Se Cathedral",destination:"Goa",category:"Attractions & Culture",description:"One of Old Goa's most prominent historic churches and architectural landmarks.",rating:null},
+  {id:"sample-goa-fontainhas",name:"Fontainhas",destination:"Goa",category:"Attractions & Culture",description:"Colourful Latin Quarter with heritage houses, narrow lanes and a distinctive Portuguese influence.",rating:null},
   {id:"sample-goa-thalassa",name:"Thalassa",destination:"Goa",category:"Food & Cafés",description:"A well-known Goa dining spot with coastal views and a relaxed evening setting.",rating:null},
+  {id:"sample-goa-mil",name:"Vinayak Family Restaurant",destination:"Goa",category:"Food & Cafés",description:"A popular local-style dining option for experiencing Goan flavours.",rating:null},
+  {id:"sample-goa-artjuna",name:"Artjuna",destination:"Goa",category:"Food & Cafés",description:"A relaxed café and lifestyle space known for food, ambience and creative culture.",rating:null},
   {id:"sample-goa-market",name:"Mapusa Market",destination:"Goa",category:"Shopping & Local Markets",description:"Local market experience for produce, spices, handicrafts and everyday Goan goods.",rating:null},
-  {id:"sample-goa-dudhsagar",name:"Dudhsagar Falls",destination:"Goa",category:"Experiences & Activities",description:"Scenic waterfall experience surrounded by lush Western Ghats landscapes.",rating:null},
+  {id:"sample-goa-panaji-market",name:"Panaji Market",destination:"Goa",category:"Shopping & Local Markets",description:"Central city market for local produce, snacks, souvenirs and everyday shopping.",rating:null},
+  {id:"sample-goa-night-market",name:"Anjuna Flea Market",destination:"Goa",category:"Shopping & Local Markets",description:"Colourful market experience with clothing, crafts, jewellery and souvenirs.",rating:null},
+  {id:"sample-goa-dudhsagar",name:"Dudhsagar Falls Jeep Safari",destination:"Goa",category:"Experiences & Activities",description:"Adventure-focused excursion to one of Goa's most famous natural attractions.",rating:null},
+  {id:"sample-goa-water-sports",name:"Calangute Water Sports",destination:"Goa",category:"Experiences & Activities",description:"Beach activities including boating and water-sport experiences along the North Goa coast.",rating:null},
+  {id:"sample-goa-spice",name:"Goa Spice Plantation Tour",destination:"Goa",category:"Experiences & Activities",description:"A hands-on cultural experience exploring tropical spices and traditional Goan life.",rating:null},
+
   {id:"sample-kerala-munnar",name:"Munnar Tea Gardens",destination:"Kerala",category:"Nature & Outdoors",description:"Misty tea-covered hills and scenic viewpoints around Munnar.",rating:null},
+  {id:"sample-kerala-varkala",name:"Varkala Beach",destination:"Kerala",category:"Nature & Outdoors",description:"Dramatic coastal cliffs, sea views and a relaxed beach atmosphere.",rating:null},
+  {id:"sample-kerala-athirappilly",name:"Athirappilly Falls",destination:"Kerala",category:"Nature & Outdoors",description:"Majestic waterfall surrounded by lush tropical forest in Kerala.",rating:null},
   {id:"sample-kerala-fortkochi",name:"Fort Kochi",destination:"Kerala",category:"Attractions & Culture",description:"Historic waterfront neighbourhood with heritage streets and cultural landmarks.",rating:null},
+  {id:"sample-kerala-mattancherry",name:"Mattancherry Palace",destination:"Kerala",category:"Attractions & Culture",description:"Historic palace and museum showcasing Kerala's rich cultural heritage.",rating:null},
+  {id:"sample-kerala-chinese-nets",name:"Chinese Fishing Nets",destination:"Kerala",category:"Attractions & Culture",description:"Iconic waterfront landmark and one of Kochi's best-known sights.",rating:null},
   {id:"sample-kerala-cafe",name:"Kashi Art Café",destination:"Kerala",category:"Food & Cafés",description:"Art-filled café experience in the heart of Fort Kochi.",rating:null},
+  {id:"sample-kerala-paragon",name:"Paragon Restaurant",destination:"Kerala",category:"Food & Cafés",description:"Popular restaurant known for Kerala-style dishes and Malabar flavours.",rating:null},
+  {id:"sample-kerala-fusion",name:"Kerala Café",destination:"Kerala",category:"Food & Cafés",description:"A convenient way to explore familiar Kerala flavours and local specialities.",rating:null},
   {id:"sample-kerala-handloom",name:"Kerala Handicrafts",destination:"Kerala",category:"Shopping & Local Markets",description:"Browse traditional Kerala crafts, textiles and locally made souvenirs.",rating:null},
-  {id:"sample-kerala-backwaters",name:"Alleppey Backwaters",destination:"Kerala",category:"Experiences & Activities",description:"Relaxing backwater experience with houseboats and scenic waterways.",rating:null}
+  {id:"sample-kerala-broadway",name:"Broadway Market Kochi",destination:"Kerala",category:"Shopping & Local Markets",description:"Busy local shopping area for spices, textiles, household goods and souvenirs.",rating:null},
+  {id:"sample-kerala-jewtown",name:"Jew Town",destination:"Kerala",category:"Shopping & Local Markets",description:"Historic shopping street around Mattancherry with antiques, crafts and cafés.",rating:null},
+  {id:"sample-kerala-backwaters",name:"Alleppey Backwaters",destination:"Kerala",category:"Experiences & Activities",description:"Relaxing backwater experience with houseboats and scenic waterways.",rating:null},
+  {id:"sample-kerala-kathakali",name:"Kathakali Cultural Show",destination:"Kerala",category:"Experiences & Activities",description:"Traditional performance experience featuring Kerala's distinctive dance-drama art form.",rating:null},
+  {id:"sample-kerala-houseboat",name:"Alappuzha Houseboat Cruise",destination:"Kerala",category:"Experiences & Activities",description:"A classic Kerala travel experience through peaceful backwaters and village scenery.",rating:null}
 ];
 
 function voyaraExploreCard(destination, searched=false) {

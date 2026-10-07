@@ -1994,10 +1994,10 @@ function renderCommunityPosts() {
   if(!results.length){
     grid.innerHTML=`<div class="empty-state"><h3>Ready to discover somewhere?</h3><p>Enter a destination and select Search places to find recommendations.</p></div>`;
   } else if(category==='all') {
-    const grouped=VOYARA_FOR_YOU_CATEGORIES.map(cat=>({cat,items:results.filter(item=>item.category===cat).slice(0,4)})).filter(group=>group.items.length);
+    const grouped=VOYARA_FOR_YOU_CATEGORIES.map(cat=>({cat,items:results.filter(item=>item.category===cat).slice(0,6)})).filter(group=>group.items.length);
     grid.innerHTML=grouped.map(group=>`<section class="voyara-category-results"><div class="voyara-category-results-heading"><h3>${voyaraEscapeAttr(group.cat)}</h3><span>${group.items.length} recommendations</span></div><div class="voyara-category-results-grid">${group.items.map(cardMarkup).join('')}</div></section>`).join('');
   } else {
-    grid.innerHTML=results.slice(0,4).map(cardMarkup).join('');
+    grid.innerHTML=results.slice(0,6).map(cardMarkup).join('');
   }
   grid.querySelectorAll('[data-save-place]').forEach(button=>button.addEventListener('click',()=>{
     const item=voyaraForYouResults.find(place=>String(place.id)===button.dataset.savePlace); if(!item)return;
@@ -2219,7 +2219,7 @@ function voyaraOpenCollageEditor(albumId) {
   if(!album.photos.length){alert("Add at least one photo before creating a collage.");return;}
   const editor=$("voyaraCollageEditor"); if(!editor)return;
   const draft=voyaraGetJSON(VOYARA_COLLAGE_DRAFT_KEY,{});
-  const selected=Array.isArray(draft.selected)?draft.selected.filter(id=>album.photos.some(p=>String(p.id)===String(id))):album.photos.slice(0,4).map(p=>p.id);
+  const selected=Array.isArray(draft.selected)?draft.selected.filter(id=>album.photos.some(p=>String(p.id)===String(id))):album.photos.slice(0,6).map(p=>p.id);
   editor.innerHTML=`<div class="voyara-collage-editor-heading"><div><span class="eyebrow">CREATE A PAGE</span><h3>Create a collage</h3><p class="voyara-muted">Choose the photos you want, then pick a layout and theme. Your original photos stay in the album.</p></div><button type="button" class="secondary-button" id="voyaraCancelCollageBtn">Close</button></div><div class="voyara-collage-fields"><label>Page title<input id="voyaraCollageTitle" value="${escapeHtml(draft.title||album.name)}" maxlength="60"></label><label>Layout<select id="voyaraCollageLayout"><option value="grid">Clean grid</option><option value="polaroid">Polaroid</option><option value="film">Film strip</option></select></label><label>Theme<select id="voyaraCollageTheme"><option value="sage">Sage</option><option value="coastal">Coastal</option><option value="night">Night</option><option value="terracotta">Warm</option></select></label></div><div><h4>Select photos</h4><div class="voyara-collage-photo-picker">${album.photos.map(p=>`<label class="voyara-collage-pick"><img src="${p.src}" alt=""><input type="checkbox" data-collage-photo value="${p.id}" ${selected.includes(p.id)?'checked':''}><span>${escapeHtml(p.name||'Photo')}</span></label>`).join('')}</div></div><label class="voyara-collage-caption-label">Caption (optional)<input id="voyaraCollageCaption" placeholder="A short line about this memory" value="${escapeHtml(draft.caption||'')}"></label><div id="voyaraCollagePreview" class="voyara-collage-preview"></div><div class="voyara-post-actions"><button type="button" class="primary-button" id="voyaraSaveCollageBtn">Save collage</button><button type="button" class="secondary-button" id="voyaraExportCollageBtn">Export as image</button></div>`;
   editor.classList.remove("hidden");
   if(draft.layout) $("voyaraCollageLayout").value=draft.layout;
@@ -2315,34 +2315,64 @@ const VOYARA_FOR_YOU_SAMPLE_RESULTS = [
   {id:"sample-goa-baga",name:"Baga Beach",destination:"Goa",category:"Nature & Outdoors",description:"Popular North Goa beach for sunsets, water activities and a lively coastal atmosphere.",rating:null},
   {id:"sample-goa-palolem",name:"Palolem Beach",destination:"Goa",category:"Nature & Outdoors",description:"A scenic South Goa beach known for its calm waters, palm-lined shore and relaxed atmosphere.",rating:null},
   {id:"sample-goa-dudhsagar-nature",name:"Dudhsagar Falls",destination:"Goa",category:"Nature & Outdoors",description:"A spectacular waterfall surrounded by lush Western Ghats scenery.",rating:null},
+  {id:"sample-goa-candolim",name:"Candolim Beach",destination:"Goa",category:"Nature & Outdoors",description:"A popular North Goa beach with a long sandy shoreline and a relaxed coastal setting.",rating:null},
+  {id:"sample-goa-arambol",name:"Arambol Beach",destination:"Goa",category:"Nature & Outdoors",description:"A scenic North Goa beach known for its laid-back atmosphere and coastal walks.",rating:null},
+  {id:"sample-goa-butterfly",name:"Butterfly Beach",destination:"Goa",category:"Nature & Outdoors",description:"A quieter South Goa beach surrounded by greenery and rocky coastal scenery.",rating:null},
   {id:"sample-goa-basilica",name:"Basilica of Bom Jesus",destination:"Goa",category:"Attractions & Culture",description:"Historic Old Goa landmark known for its Portuguese-era architecture and heritage.",rating:null},
   {id:"sample-goa-se-cathedral",name:"Se Cathedral",destination:"Goa",category:"Attractions & Culture",description:"One of Old Goa's most prominent historic churches and architectural landmarks.",rating:null},
   {id:"sample-goa-fontainhas",name:"Fontainhas",destination:"Goa",category:"Attractions & Culture",description:"Colourful Latin Quarter with heritage houses, narrow lanes and a distinctive Portuguese influence.",rating:null},
+  {id:"sample-goa-aguada",name:"Fort Aguada",destination:"Goa",category:"Attractions & Culture",description:"Historic Portuguese-era fort overlooking the Arabian Sea near Sinquerim.",rating:null},
+  {id:"sample-goa-chapora",name:"Chapora Fort",destination:"Goa",category:"Attractions & Culture",description:"Hilltop fort known for sweeping views over the Chapora River and coastline.",rating:null},
+  {id:"sample-goa-mangueshi",name:"Shri Mangueshi Temple",destination:"Goa",category:"Attractions & Culture",description:"A prominent Goan temple known for its distinctive architecture and cultural heritage.",rating:null},
   {id:"sample-goa-thalassa",name:"Thalassa",destination:"Goa",category:"Food & Cafés",description:"A well-known Goa dining spot with coastal views and a relaxed evening setting.",rating:null},
   {id:"sample-goa-mil",name:"Vinayak Family Restaurant",destination:"Goa",category:"Food & Cafés",description:"A popular local-style dining option for experiencing Goan flavours.",rating:null},
   {id:"sample-goa-artjuna",name:"Artjuna",destination:"Goa",category:"Food & Cafés",description:"A relaxed café and lifestyle space known for food, ambience and creative culture.",rating:null},
+  {id:"sample-goa-gunpowder",name:"Gunpowder",destination:"Goa",category:"Food & Cafés",description:"A popular dining destination known for South Indian-inspired food in a relaxed setting.",rating:null},
+  {id:"sample-goa-baba",name:"Baba Au Rum",destination:"Goa",category:"Food & Cafés",description:"A casual café and bakery-style spot known for food, coffee and a relaxed atmosphere.",rating:null},
+  {id:"sample-goa-souza",name:"Souza Lobo",destination:"Goa",category:"Food & Cafés",description:"A long-established Calangute beachfront restaurant associated with classic Goan dining.",rating:null},
   {id:"sample-goa-market",name:"Mapusa Market",destination:"Goa",category:"Shopping & Local Markets",description:"Local market experience for produce, spices, handicrafts and everyday Goan goods.",rating:null},
   {id:"sample-goa-panaji-market",name:"Panaji Market",destination:"Goa",category:"Shopping & Local Markets",description:"Central city market for local produce, snacks, souvenirs and everyday shopping.",rating:null},
   {id:"sample-goa-night-market",name:"Anjuna Flea Market",destination:"Goa",category:"Shopping & Local Markets",description:"Colourful market experience with clothing, crafts, jewellery and souvenirs.",rating:null},
+  {id:"sample-goa-saturday-market",name:"Saturday Night Market",destination:"Goa",category:"Shopping & Local Markets",description:"Popular weekend market experience with food, clothing, crafts and local shopping.",rating:null},
+  {id:"sample-goa-tibetan-market",name:"Tibetan Market Baga",destination:"Goa",category:"Shopping & Local Markets",description:"Compact shopping area around Baga with souvenirs, clothing and small local shops.",rating:null},
+  {id:"sample-goa-pondamarket",name:"Ponda Market",destination:"Goa",category:"Shopping & Local Markets",description:"Local market experience for everyday goods, produce and regional shopping.",rating:null},
   {id:"sample-goa-dudhsagar",name:"Dudhsagar Falls Jeep Safari",destination:"Goa",category:"Experiences & Activities",description:"Adventure-focused excursion to one of Goa's most famous natural attractions.",rating:null},
   {id:"sample-goa-water-sports",name:"Calangute Water Sports",destination:"Goa",category:"Experiences & Activities",description:"Beach activities including boating and water-sport experiences along the North Goa coast.",rating:null},
   {id:"sample-goa-spice",name:"Goa Spice Plantation Tour",destination:"Goa",category:"Experiences & Activities",description:"A hands-on cultural experience exploring tropical spices and traditional Goan life.",rating:null},
+  {id:"sample-goa-sunset-cruise",name:"Mandovi River Sunset Cruise",destination:"Goa",category:"Experiences & Activities",description:"Evening cruise experience with views of the Mandovi waterfront and Goa skyline.",rating:null},
+  {id:"sample-goa-scuba",name:"Grand Island Scuba Diving",destination:"Goa",category:"Experiences & Activities",description:"Popular water-based adventure experience around Goa's coastal islands.",rating:null},
+  {id:"sample-goa-kayak",name:"Palolem Kayaking",destination:"Goa",category:"Experiences & Activities",description:"Outdoor water activity option around the scenic Palolem coastline.",rating:null},
 
   {id:"sample-kerala-munnar",name:"Munnar Tea Gardens",destination:"Kerala",category:"Nature & Outdoors",description:"Misty tea-covered hills and scenic viewpoints around Munnar.",rating:null},
   {id:"sample-kerala-varkala",name:"Varkala Beach",destination:"Kerala",category:"Nature & Outdoors",description:"Dramatic coastal cliffs, sea views and a relaxed beach atmosphere.",rating:null},
   {id:"sample-kerala-athirappilly",name:"Athirappilly Falls",destination:"Kerala",category:"Nature & Outdoors",description:"Majestic waterfall surrounded by lush tropical forest in Kerala.",rating:null},
+  {id:"sample-kerala-eravikulam",name:"Eravikulam National Park",destination:"Kerala",category:"Nature & Outdoors",description:"Mountain landscape near Munnar known for rolling grasslands and biodiversity.",rating:null},
+  {id:"sample-kerala-kovalam",name:"Kovalam Beach",destination:"Kerala",category:"Nature & Outdoors",description:"Popular coastal destination known for beaches, lighthouse views and seaside walks.",rating:null},
+  {id:"sample-kerala-periyar",name:"Periyar Wildlife Sanctuary",destination:"Kerala",category:"Nature & Outdoors",description:"Wildlife and forest destination around the scenic Periyar lake region.",rating:null},
   {id:"sample-kerala-fortkochi",name:"Fort Kochi",destination:"Kerala",category:"Attractions & Culture",description:"Historic waterfront neighbourhood with heritage streets and cultural landmarks.",rating:null},
   {id:"sample-kerala-mattancherry",name:"Mattancherry Palace",destination:"Kerala",category:"Attractions & Culture",description:"Historic palace and museum showcasing Kerala's rich cultural heritage.",rating:null},
   {id:"sample-kerala-chinese-nets",name:"Chinese Fishing Nets",destination:"Kerala",category:"Attractions & Culture",description:"Iconic waterfront landmark and one of Kochi's best-known sights.",rating:null},
+  {id:"sample-kerala-folklore",name:"Kerala Folklore Museum",destination:"Kerala",category:"Attractions & Culture",description:"Museum showcasing traditional art, architecture and cultural objects from Kerala.",rating:null},
+  {id:"sample-kerala-stfrancis",name:"St. Francis Church",destination:"Kerala",category:"Attractions & Culture",description:"Historic church in Fort Kochi with an important colonial-era heritage setting.",rating:null},
+  {id:"sample-kerala-hillpalace",name:"Hill Palace Museum",destination:"Kerala",category:"Attractions & Culture",description:"Large heritage museum complex near Kochi with royal collections and grounds.",rating:null},
   {id:"sample-kerala-cafe",name:"Kashi Art Café",destination:"Kerala",category:"Food & Cafés",description:"Art-filled café experience in the heart of Fort Kochi.",rating:null},
   {id:"sample-kerala-paragon",name:"Paragon Restaurant",destination:"Kerala",category:"Food & Cafés",description:"Popular restaurant known for Kerala-style dishes and Malabar flavours.",rating:null},
   {id:"sample-kerala-fusion",name:"Kerala Café",destination:"Kerala",category:"Food & Cafés",description:"A convenient way to explore familiar Kerala flavours and local specialities.",rating:null},
+  {id:"sample-kerala-dheputtu",name:"Dhe Puttu",destination:"Kerala",category:"Food & Cafés",description:"Restaurant known for puttu-based dishes and Kerala-inspired comfort food.",rating:null},
+  {id:"sample-kerala-coffeehouse",name:"Indian Coffee House",destination:"Kerala",category:"Food & Cafés",description:"Classic café-style stop for simple South Indian food and coffee.",rating:null},
+  {id:"sample-kerala-malabarjunction",name:"Malabar Junction",destination:"Kerala",category:"Food & Cafés",description:"Fort Kochi dining option featuring Kerala and broader Indian flavours.",rating:null},
   {id:"sample-kerala-handloom",name:"Kerala Handicrafts",destination:"Kerala",category:"Shopping & Local Markets",description:"Browse traditional Kerala crafts, textiles and locally made souvenirs.",rating:null},
   {id:"sample-kerala-broadway",name:"Broadway Market Kochi",destination:"Kerala",category:"Shopping & Local Markets",description:"Busy local shopping area for spices, textiles, household goods and souvenirs.",rating:null},
   {id:"sample-kerala-jewtown",name:"Jew Town",destination:"Kerala",category:"Shopping & Local Markets",description:"Historic shopping street around Mattancherry with antiques, crafts and cafés.",rating:null},
+  {id:"sample-kerala-lulu",name:"LuLu Mall Kochi",destination:"Kerala",category:"Shopping & Local Markets",description:"Large modern shopping destination in Kochi with retail, dining and entertainment.",rating:null},
+  {id:"sample-kerala-chalai",name:"Chalai Market",destination:"Kerala",category:"Shopping & Local Markets",description:"Busy traditional market area in Thiruvananthapuram for local goods and produce.",rating:null},
+  {id:"sample-kerala-spice-market",name:"Mattancherry Spice Market",destination:"Kerala",category:"Shopping & Local Markets",description:"Historic area around Mattancherry associated with spices, antiques and local shopping.",rating:null},
   {id:"sample-kerala-backwaters",name:"Alleppey Backwaters",destination:"Kerala",category:"Experiences & Activities",description:"Relaxing backwater experience with houseboats and scenic waterways.",rating:null},
   {id:"sample-kerala-kathakali",name:"Kathakali Cultural Show",destination:"Kerala",category:"Experiences & Activities",description:"Traditional performance experience featuring Kerala's distinctive dance-drama art form.",rating:null},
   {id:"sample-kerala-houseboat",name:"Alappuzha Houseboat Cruise",destination:"Kerala",category:"Experiences & Activities",description:"A classic Kerala travel experience through peaceful backwaters and village scenery.",rating:null}
+  {id:"sample-kerala-kathakali-centre",name:"Kerala Kathakali Centre",destination:"Kerala",category:"Experiences & Activities",description:"Cultural venue in Kochi for experiencing Kerala's traditional Kathakali performance art.",rating:null},
+  {id:"sample-kerala-periyar-boating",name:"Periyar Lake Boating",destination:"Kerala",category:"Experiences & Activities",description:"Scenic boating experience through the forested Periyar lake region.",rating:null},
+  {id:"sample-kerala-kumbalangi",name:"Kumbalangi Village",destination:"Kerala",category:"Experiences & Activities",description:"Village experience highlighting Kerala's backwaters, fishing culture and rural landscapes.",rating:null}
 ];
 
 function voyaraExploreCard(destination, searched=false) {
@@ -2469,7 +2499,7 @@ function renderForYouResults() {
   const grid=$("recommendationGrid"); if(!grid)return;
   const category=$("forYouCategory")?.value||"all";
   if(!voyaraForYouResults.length){grid.innerHTML=`<div class="for-you-empty"><strong>Search a destination to discover places.</strong><span>Choose one of the five categories or view all five categories together.</span></div>`;return;}
-  const groups=category==="all" ? VOYARA_FOR_YOU_CATEGORIES.map(cat=>({cat,items:voyaraForYouResults.filter(x=>x.category===cat).slice(0,4)})).filter(g=>g.items.length) : [{cat:category,items:voyaraForYouResults.filter(x=>x.category===category).slice(0,4)}];
+  const groups=category==="all" ? VOYARA_FOR_YOU_CATEGORIES.map(cat=>({cat,items:voyaraForYouResults.filter(x=>x.category===cat).slice(0,6)})).filter(g=>g.items.length) : [{cat:category,items:voyaraForYouResults.filter(x=>x.category===category).slice(0,6)}];
   if(!groups.some(g=>g.items.length)){grid.innerHTML=`<div class="for-you-empty"><strong>No matching places were found for this category.</strong><span>Try another category or a more specific destination.</span></div>`;return;}
   grid.innerHTML=groups.map(g=>`<section class="voyara-category-results"><div class="voyara-category-results-heading"><div><span class="eyebrow">${escapeHtml(g.cat)}</span><h3>${g.cat}</h3></div><span>${g.items.length} recommendations</span></div><div class="voyara-category-results-grid">${g.items.map(voyaraForYouCard).join("")}</div></section>`).join("");
   grid.querySelectorAll("[data-save-final-place]").forEach(btn=>btn.addEventListener("click",()=>{const item=voyaraForYouResults.find(x=>String(x.id)===String(btn.dataset.saveFinalPlace));if(!item)return;let saved=voyaraGetJSON(VOYARA_SAVED_PLACES_KEY,[]);const idx=saved.findIndex(x=>String(x.id)===String(item.id));if(idx>=0){saved.splice(idx,1);btn.textContent="♡ Wishlist";}else{saved.push({...item,savedAt:new Date().toISOString()});btn.textContent="✓ Saved";}voyaraSetJSON(VOYARA_SAVED_PLACES_KEY,saved);updateHomeStats();}));

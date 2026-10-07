@@ -457,6 +457,9 @@ async function createItinerary() {
   }
 
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 45000);
+
     const response = await fetch(
       `${API_BASE}/api/plan`,
       {
@@ -467,9 +470,12 @@ async function createItinerary() {
         body: JSON.stringify({
           message: prompt,
           ...data
-        })
+        }),
+        signal: controller.signal
       }
     );
+
+    clearTimeout(timeout);
 
     const result = await response.json();
 
@@ -2223,11 +2229,15 @@ async function searchForYouPlaces() {
 
     for(const cat of categories){
       try {
+        const controller=new AbortController();
+        const timeout=setTimeout(()=>controller.abort(),7000);
         const response=await fetch(`${API_BASE}/api/places`,{
           method:"POST",
           headers:{"Content-Type":"application/json"},
-          body:JSON.stringify({destination,category:cat,query:""})
+          body:JSON.stringify({destination,category:cat,query:""}),
+          signal:controller.signal
         });
+        clearTimeout(timeout);
         let data={};
         try { data=await response.json(); } catch (_) {}
         if(!response.ok||!data.success) continue;

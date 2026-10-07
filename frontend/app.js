@@ -418,27 +418,33 @@ function showApplication() {
 // ============================================================
 
 function bindNavigation() {
-  document.addEventListener("click", (event) => {
-    // Support both the top navigation (data-section) and homepage cards (data-target).
+  const handleNavigation = (event) => {
     const navigationButton = event.target.closest(
       "[data-section], [data-target]"
     );
 
-    if (!navigationButton) {
-      return;
-    }
+    if (!navigationButton) return;
 
     const sectionName =
       navigationButton.dataset.section ||
       navigationButton.dataset.target;
 
-    if (!sectionName) {
-      return;
-    }
+    if (!sectionName) return;
 
     event.preventDefault();
+    event.stopPropagation();
     showSection(sectionName);
+  };
+
+  // Bind directly to navigation controls as well as using delegation.
+  // This keeps navigation reliable after the auth screen is replaced.
+  document.querySelectorAll("[data-section], [data-target]").forEach((button) => {
+    if (button.dataset.navigationBound === "true") return;
+    button.dataset.navigationBound = "true";
+    button.addEventListener("click", handleNavigation);
   });
+
+  document.addEventListener("click", handleNavigation);
 }
 
 function showSection(sectionName) {

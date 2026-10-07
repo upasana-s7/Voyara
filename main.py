@@ -927,129 +927,116 @@ def _osm_places_search(
     category,
     query_text
 ):
-    """Reliable OSM fallback with category search plus broad fallback."""
+    """Fast and resilient OpenStreetMap place search.
 
-    category_terms = {
-        "Food & Cafés": ["restaurant", "cafe", "food"],
-        "Attractions & Culture": ["tourist attraction", "museum", "historic place"],
-        "Nature & Outdoors": ["park", "waterfall", "viewpoint"],
-        "Experiences & Activities": ["tourist attraction", "adventure", "activity"],
-        "Shopping & Local Markets": ["market", "shopping", "bazaar"],
-        "all": ["tourist attraction", "restaurant", "cafe"],
+    Keep the number of Nominatim requests low because the public
+    service is rate-limited. One focused search is followed by one
+    broad fallback, rather than several sequential category requests.
+    """
+
+    category_queries = {
+        "Food & Cafés": "restaurant cafe",
+        "Attractions & Culture": "tourist attraction museum",
+        "Nature & Outdoors": "park nature",
+        "Experiences & Activities": "tourist attraction",
+        "Shopping & Local Markets": "market shopping",
+        "all": "tourist attraction",
     }
 
-    terms = [query_text] if query_text else category_terms.get(
-        category,
-        ["tourist attraction"]
-    )
+    query = str(query_text or "").strip()
+    if not query:
+        query = category_queries.get(
+            category,
+            "tourist attraction"
+        )
+
+    def search_nominatim(search_query, limit=8):
+        params = urllib.parse.urlencode({
+            "format": "jsonv2",
+            "addressdetails": 1,
+            "limit": limit,
+            "q": search_query,
+        })
+
+        return _json_request(
+            "https://nominatim.openstreetmap.org/search?" + params,
+            headers={
+                "Accept-Language": "en",
+                "User-Agent": "VoyaraTravelPlanner/1.0",
+            },
+            timeout=6,
+        )
 
     results = []
     seen = set()
 
-    for term in terms:
-        params = urllib.parse.urlencode({
-            "format": "jsonv2",
-            "addressdetails": 1,
-            "limit": 4,
-            "q": f"{term} in {destination}",
-        })
+    # First focused search.
+    try:
+        data = search_nominatim(
+            f"{query} in {destination}",
+            limit=8
+        )
+    except Exception as error:
+        print("OSM FOCUSED SEARCH ERROR:", error)
+        data = []
 
+    # If the category search is empty, use the destination itself as a
+    # broad fallback. This keeps valid destinations from producing a
+    # completely blank For You section.
+    if not data:
         try:
-            data = _json_request(
-                "https://nominatim.openstreetmap.org/search?" + params,
-                headers={
-                    "Accept-Language": "en",
-                    "User-Agent": "VoyaraTravelPlanner/1.0",
-                },
-                timeout=5,
-            )
+            data = search_nominatim(destination, limit=8)
         except Exception as error:
-            print("OSM SEARCH ERROR:", term, error)
+            print("OSM BROAD SEARCH ERROR:", error)
+            data = []
+
+    for item in data:
+        name = str(
+            item.get("name")
+            or item.get("display_name", "").split(",")[0]
+            or ""
+        ).strip()
+
+        lat = item.get("lat")
+        lon = item.get("lon")
+
+        if not name or lat is None or lon is None:
             continue
 
-        for item in data:
-            name = str(
-                item.get("name")
-                or item.get("display_name", "").split(",")[0]
-                or ""
-            ).strip()
-            lat, lon = item.get("lat"), item.get("lon")
+        key = name.casefold()
+        if key in seen:
+            continue
 
-            if not name or lat is None or lon is None:
-                continue
+        seen.add(key)
 
-            key = name.casefold()
-            if key in seen:
-                continue
+        place_type = (
+            item.get("type")
+            or item.get("class")
+            or category
+        )
 
-            seen.add(key)
-            place_type = item.get("type") or item.get("class") or category
-
-            results.append({
-                "id": f"osm-{item.get('osm_type')}-{item.get('osm_id')}",
-                "name": name,
-                "destination": destination,
-                "category": category,
-                "type": str(place_type).replace("_", " "),
-                "address": item.get("display_name") or destination,
-                "lat": lat,
-                "lon": lon,
-                "rating": None,
-                "ratingCount": None,
-                "mapUrl": (
-                    "https://www.google.com/maps/search/?api=1&query="
-                    + urllib.parse.quote(name + ", " + destination)
-                ),
-                "source": "OpenStreetMap",
-            })
-
-            if len(results) >= 4:
-                return results
-
-    # Final fallback: return the destination itself so For You never
-    # becomes an empty result for a valid place name.
-    if not results:
-        params = urllib.parse.urlencode({
-            "format": "jsonv2",
-            "addressdetails": 1,
-            "limit": 1,
-            "q": destination,
+        results.append({
+            "id": f"osm-{item.get('osm_type')}-{item.get('osm_id')}",
+            "name": name,
+            "destination": destination,
+            "category": category,
+            "type": str(place_type).replace("_", " "),
+            "address": item.get("display_name") or destination,
+            "lat": lat,
+            "lon": lon,
+            "rating": None,
+            "ratingCount": None,
+            "mapUrl": (
+                "https://www.google.com/maps/search/?api=1&query="
+                + urllib.parse.quote(
+                    name + ", " + destination
+                )
+            ),
+            "source": "OpenStreetMap",
         })
 
-        try:
-            data = _json_request(
-                "https://nominatim.openstreetmap.org/search?" + params,
-                headers={
-                    "Accept-Language": "en",
-                    "User-Agent": "VoyaraTravelPlanner/1.0",
-                },
-                timeout=5,
-            )
-            if data:
-                item = data[0]
-                name = str(item.get("name") or destination).strip()
-                lat, lon = item.get("lat"), item.get("lon")
-
-                if lat is not None and lon is not None:
-                    results.append({
-                        "id": f"osm-destination-{item.get('osm_id')}",
-                        "name": name,
-                        "destination": destination,
-                        "category": category,
-                        "type": category,
-                        "address": item.get("display_name") or destination,
-                        "lat": lat,
-                        "lon": lon,
-                        "rating": None,
-                        "ratingCount": None,
-                        "mapUrl": (
-                            "https://www.google.com/maps/search/?api=1&query="
-                            + urllib.parse.quote(name + ", " + destination)
-                        ),
-                        "source": "OpenStreetMap",
-                    })
-        except Exception as error:
-            print("OSM DESTINATION FALLBACK ERROR:", error)
+        if len(results) >= 4:
+            break
 
     return results[:4]
 

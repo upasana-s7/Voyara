@@ -1255,5 +1255,71 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="./app.js"></script>
 
+<script>
+<!-- Voyara auth fallback -->
+(function () {
+  function goIntoVoyara() {
+    var welcome = document.getElementById("welcomeScreen");
+    var app = document.getElementById("app");
+    var name = (document.getElementById("nameInput") || {}).value || "";
+    var contact = (document.getElementById("contactInput") || {}).value || "";
+    var password = (document.getElementById("passwordInput") || {}).value || "";
+    var activeTab = document.querySelector(".voyara-auth-tab.active");
+    var mode = activeTab && activeTab.dataset ? activeTab.dataset.authMode : "signup";
+    name = name.trim();
+    contact = contact.trim().toLowerCase();
+
+    if (!contact) { alert("Please enter your email address or phone number."); return; }
+    if (password.length < 6) { alert("Password must be at least 6 characters."); return; }
+    if (mode === "signup" && !name) { alert("Please enter your name."); return; }
+
+    var accounts = {};
+    try { accounts = JSON.parse(localStorage.getItem("voyaraAccountsV2") || "{}"); } catch (_) {}
+    
+    if (mode === "signup") {
+      if (accounts[contact]) {
+        alert("An account already exists with this email or phone number. Choose Log in instead.");
+        return;
+      }
+      accounts[contact] = {
+        name: name,
+        email: contact.indexOf("@") !== -1 ? contact : "",
+        phone: contact.indexOf("@") === -1 ? contact : "",
+        password: password,
+        createdAt: new Date().toISOString()
+      };
+      localStorage.setItem("voyaraAccountsV2", JSON.stringify(accounts));
+    } else {
+      if (!accounts[contact] || accounts[contact].password !== password) {
+        alert("Incorrect email/phone or password. Please try again.");
+        return;
+      }
+      name = accounts[contact].name || name || "Traveller";
+    }
+
+    localStorage.setItem("voyaraUserName", name);
+    localStorage.setItem("voyaraUserIdentifier", contact);
+    if (contact.indexOf("@") !== -1) localStorage.setItem("voyaraUserEmail", contact);
+    else localStorage.setItem("voyaraUserPhone", contact);
+
+    if (welcome) welcome.classList.add("hidden");
+    if (app) app.classList.remove("hidden");
+    var pn=document.getElementById("profileName"); if(pn) pn.textContent=name;
+    var pi=document.getElementById("profileInitial"); if(pi) pi.textContent=name.charAt(0).toUpperCase();
+    var ug=document.getElementById("userGreeting"); if(ug) ug.textContent=name;
+    var hu=document.getElementById("homeUserName"); if(hu) hu.textContent=name;
+    document.querySelectorAll(".page-section").forEach(function(s){s.classList.remove("active-section");});
+    var home=document.getElementById("section-home"); if(home) home.classList.add("active-section");
+  }
+
+  document.addEventListener("click", function (event) {
+    var button = event.target.closest("#authSubmitBtn");
+    if (!button) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    goIntoVoyara();
+  }, true);
+})();
+</script>
 </body>
 </html>

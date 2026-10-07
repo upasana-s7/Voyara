@@ -815,7 +815,7 @@ def _google_places_search(
 
     payload = {
         "textQuery": text_query,
-        "pageSize": 4
+        "maxResultCount": 6
     }
 
     fields = (
@@ -853,7 +853,7 @@ def _google_places_search(
             "https://places.googleapis.com/v1/places:searchText",
             {
                 "textQuery": fallback_query,
-                "pageSize": 4
+                "maxResultCount": 6
             },
             headers={
                 "X-Goog-Api-Key": GOOGLE_MAPS_API_KEY,
@@ -1098,11 +1098,11 @@ def _osm_places_search(
             "source": "OpenStreetMap",
         })
 
-        if len(results) >= 4:
+        if len(results) >= 6:
             break
 
     if results:
-        return results[:4]
+        return results[:6]
 
     # Last-resort Nominatim fallback. This is intentionally only one
     # request so a temporary Overpass issue cannot make the UI hang.
@@ -1157,12 +1157,12 @@ def _osm_places_search(
                 ),
                 "source": "OpenStreetMap",
             })
-            if len(results) >= 4:
+            if len(results) >= 6:
                 break
     except Exception as error:
         print("OSM FALLBACK ERROR:", error)
 
-    return results[:4]
+    return results[:6]
 
 
 @app.route(
@@ -1224,7 +1224,7 @@ def discover_places():
             "google_places_configured":
                 bool(GOOGLE_MAPS_API_KEY),
             "results":
-                results[:4],
+                results[:6],
         })
 
     except urllib.error.HTTPError as error:

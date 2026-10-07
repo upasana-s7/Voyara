@@ -112,6 +112,7 @@ function initializeVoyara() {
   bindScrapbook();
   bindTrips();
   bindGlobalButtons();
+  voyaraEnsureTripToolkit();
 
   renderSavedJourneys();
   renderTrips();
@@ -517,6 +518,8 @@ async function createItinerary() {
     currentProfile = result.profile || data;
 
     displayItinerary(currentItinerary);
+    voyaraEnsureTripToolkit();
+    setTimeout(voyaraLoadWeather,150);
 
     if (plannerStatus) {
       plannerStatus.textContent =
@@ -2249,7 +2252,7 @@ async function searchForYouPlaces() {
   }
   grid.innerHTML=`<div class="for-you-loading"><strong>Finding places in ${escapeHtml(destination)}...</strong><span>Searching the selected category and preparing recommendations.</span></div>`;
   if(note)note.textContent="";
-  const categories=category==="all"?VOYARA_FOR_YOU_CATEGORIES:[category];
+  const categories=[category];
   try {
     const results=[];
     const sources=new Set();
@@ -2293,6 +2296,157 @@ function bindRecommendationsFinal() {
   renderForYouResults();
 }
 
+/* ============================================================
+   TRIP TOOLKIT
+   Budget tracker + weather + packing checklist + share.
+============================================================ */
+
+const VOYARA_TOOLKIT_STYLE_ID = "voyaraToolkitStyles";
+const VOYARA_PACKING_KEY = "voyaraPackingChecklist";
+
+function voyaraEnsureTripToolkitStyles() {
+  if ($(VOYARA_TOOLKIT_STYLE_ID)) return;
+  const style=document.createElement("style");
+  style.id=VOYARA_TOOLKIT_STYLE_ID;
+  style.textContent=`
+    .voyara-trip-toolkit{margin-top:28px;border:1px solid rgba(90,70,45,.14);border-radius:24px;background:#fffdf9;box-shadow:0 14px 35px rgba(60,45,30,.07);overflow:hidden}
+    .voyara-toolkit-head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:22px 24px;border-bottom:1px solid rgba(90,70,45,.1)}
+    .voyara-toolkit-head h3{margin:3px 0 0;font-family:"Playfair Display",serif;font-size:24px}
+    .voyara-toolkit-head p{margin:4px 0 0;opacity:.7}
+    .voyara-toolkit-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .voyara-toolkit-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;padding:18px}
+    .voyara-tool-card{border:1px solid rgba(90,70,45,.12);border-radius:18px;background:#fff;padding:18px}
+    .voyara-tool-card.wide{grid-column:span 2}
+    .voyara-tool-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .voyara-tool-card-head h4{margin:0;font-size:17px}
+    .voyara-tool-toggle{border:0;background:transparent;cursor:pointer;font-size:18px}
+    .voyara-tool-body{margin-top:16px}
+    .voyara-budget-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    .voyara-budget-stat{padding:12px;border-radius:14px;background:#f7f3ed}
+    .voyara-budget-stat span{display:block;font-size:12px;opacity:.65}.voyara-budget-stat strong{display:block;margin-top:4px;font-size:18px}
+    .voyara-budget-bar{height:9px;background:#eee7dd;border-radius:99px;overflow:hidden;margin:14px 0}
+    .voyara-budget-fill{height:100%;width:0;background:currentColor;border-radius:99px;transition:width .25s}
+    .voyara-tool-row{display:flex;gap:8px;margin-top:12px}.voyara-tool-row input{flex:1}
+    .voyara-weather-main{display:flex;align-items:center;gap:14px}.voyara-weather-temp{font-size:34px;font-weight:800}.voyara-weather-icon{font-size:34px}
+    .voyara-weather-meta{opacity:.7}.voyara-weather-loading{opacity:.65}
+    .voyara-pack-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+    .voyara-pack-item{display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:12px;background:#f7f3ed}
+    .voyara-pack-item input{width:auto}.voyara-pack-item.done span{text-decoration:line-through;opacity:.55}
+    .voyara-share-box{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    @media(max-width:800px){.voyara-toolkit-grid{grid-template-columns:1fr}.voyara-tool-card.wide{grid-column:span 1}.voyara-pack-list{grid-template-columns:1fr}.voyara-budget-stats{grid-template-columns:1fr}}
+  `;
+  document.head.appendChild(style);
+}
+
+function voyaraToolkitDestination(){
+  return String(
+    lastTripRequest?.destination ||
+    currentProfile?.destination ||
+    $("destination")?.value ||
+    ""
+  ).trim();
+}
+
+function voyaraMoney(value){
+  const n=Number(value)||0;
+  return "₹"+n.toLocaleString("en-IN",{maximumFractionDigits:0});
+}
+
+function voyaraRenderBudget(){
+  const budgetInput=$("voyaraBudgetInput"), spent=$("voyaraSpentInput");
+  const budget=Number(budgetInput?.value)||0, amount=Number(spent?.value)||0;
+  const percent=budget>0?Math.min(100,(amount/budget)*100):0;
+  if($("voyaraBudgetValue"))$("voyaraBudgetValue").textContent=voyaraMoney(budget);
+  if($("voyaraSpentValue"))$("voyaraSpentValue").textContent=voyaraMoney(amount);
+  if($("voyaraRemainingValue"))$("voyaraRemainingValue").textContent=voyaraMoney(Math.max(0,budget-amount));
+  if($("voyaraBudgetFill"))$("voyaraBudgetFill").style.width=percent+"%";
+  localStorage.setItem("voyaraToolkitBudget",JSON.stringify({budget,amount}));
+}
+
+async function voyaraLoadWeather(){
+  const destination=voyaraToolkitDestination(), box=$("voyaraWeatherBody");
+  if(!box)return;
+  if(!destination){box.innerHTML=`<div class="voyara-weather-loading">Create a trip or enter a destination to see weather.</div>`;return;}
+  box.innerHTML=`<div class="voyara-weather-loading">Checking weather for ${escapeHtml(destination)}...</div>`;
+  try{
+    const geo=await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(destination)}`,{headers:{"Accept-Language":"en"}});
+    const places=geo.ok?await geo.json():[];
+    if(!places.length)throw new Error("Destination not found");
+    const lat=Number(places[0].lat),lon=Number(places[0].lon);
+    const weather=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m&timezone=auto`);
+    const data=weather.ok?await weather.json():null;
+    if(!data?.current)throw new Error("Weather unavailable");
+    const code=Number(data.current.weather_code);
+    const label=code===0?"Clear":code<=3?"Partly cloudy":code<=48?"Cloudy":code<=67?"Rain":code<=77?"Snow":code<=82?"Showers":"Stormy";
+    const icon=code===0?"☀️":code<=3?"⛅":code<=48?"☁️":code<=67?"🌧️":code<=77?"❄️":code<=82?"🌦️":"⛈️";
+    box.innerHTML=`<div class="voyara-weather-main"><span class="voyara-weather-icon">${icon}</span><div><div class="voyara-weather-temp">${Math.round(data.current.temperature_2m)}°C</div><div>${label}</div></div></div><p class="voyara-weather-meta">Feels like ${Math.round(data.current.apparent_temperature)}°C · Wind ${Math.round(data.current.wind_speed_10m)} km/h</p><small class="voyara-weather-meta">Live weather for ${escapeHtml(destination)}</small>`;
+  }catch(_){
+    box.innerHTML=`<div class="voyara-weather-loading">Weather is temporarily unavailable. Try again in a moment.</div>`;
+  }
+}
+
+function voyaraPackingItems(){
+  try{return JSON.parse(localStorage.getItem(VOYARA_PACKING_KEY)||"null")||[
+    {text:"ID / travel documents",done:false},{text:"Phone + charger",done:false},
+    {text:"Clothes",done:false},{text:"Toiletries",done:false},
+    {text:"Medicines",done:false},{text:"Comfortable footwear",done:false},
+    {text:"Power bank",done:false},{text:"Water bottle",done:false}
+  ];}catch(_){return[];}
+}
+
+function voyaraRenderPacking(){
+  const list=$("voyaraPackingList"); if(!list)return;
+  const items=voyaraPackingItems();
+  list.innerHTML=items.map((item,i)=>`<label class="voyara-pack-item ${item.done?"done":""}"><input type="checkbox" data-pack-index="${i}" ${item.done?"checked":""}><span>${escapeHtml(item.text)}</span></label>`).join("");
+  list.querySelectorAll("[data-pack-index]").forEach(cb=>cb.addEventListener("change",()=>{
+    const next=voyaraPackingItems(); next[Number(cb.dataset.packIndex)].done=cb.checked;
+    localStorage.setItem(VOYARA_PACKING_KEY,JSON.stringify(next)); voyaraRenderPacking();
+  }));
+}
+
+function voyaraShareTrip(){
+  const destination=voyaraToolkitDestination()||"my trip";
+  const text=`I'm planning a trip to ${destination} with Voyara ✈️`;
+  if(navigator.share){navigator.share({title:"My Voyara trip",text,url:location.href}).catch(()=>{});return;}
+  navigator.clipboard?.writeText(text+" "+location.href).then(()=>voyaraToast("Trip share link copied.")).catch(()=>alert(text));
+}
+
+function voyaraEnsureTripToolkit(){
+  voyaraEnsureTripToolkitStyles();
+  const planner=$("section-planner"), itinerary=$("itineraryContainer");
+  if(!planner||$("voyaraTripToolkit"))return;
+  const mount=document.createElement("div");
+  mount.id="voyaraTripToolkit";
+  mount.className="voyara-trip-toolkit";
+  mount.innerHTML=`
+    <div class="voyara-toolkit-head">
+      <div><span class="eyebrow">TRAVEL TOOLS</span><h3>Trip Toolkit</h3><p>Keep the practical parts of your journey in one place.</p></div>
+      <div class="voyara-toolkit-actions"><button type="button" class="secondary-button" id="voyaraRefreshWeather">↻ Weather</button><button type="button" class="primary-button" id="voyaraShareTripBtn">↗ Share trip</button></div>
+    </div>
+    <div class="voyara-toolkit-grid">
+      <section class="voyara-tool-card"><div class="voyara-tool-card-head"><h4>💰 Budget Tracker</h4><button class="voyara-tool-toggle" type="button" data-tool-toggle="budget">−</button></div><div class="voyara-tool-body" data-tool-body="budget"><div class="voyara-budget-stats"><div class="voyara-budget-stat"><span>Budget</span><strong id="voyaraBudgetValue">₹0</strong></div><div class="voyara-budget-stat"><span>Spent</span><strong id="voyaraSpentValue">₹0</strong></div><div class="voyara-budget-stat"><span>Remaining</span><strong id="voyaraRemainingValue">₹0</strong></div></div><div class="voyara-budget-bar"><div class="voyara-budget-fill" id="voyaraBudgetFill"></div></div><div class="voyara-tool-row"><input id="voyaraBudgetInput" type="number" min="0" placeholder="Total budget"><input id="voyaraSpentInput" type="number" min="0" placeholder="Amount spent"></div></div></section>
+      <section class="voyara-tool-card"><div class="voyara-tool-card-head"><h4>🌦️ Weather</h4><button class="voyara-tool-toggle" type="button" data-tool-toggle="weather">−</button></div><div class="voyara-tool-body" data-tool-body="weather" id="voyaraWeatherBody"><div class="voyara-weather-loading">Create a trip to check weather.</div></div></section>
+      <section class="voyara-tool-card wide"><div class="voyara-tool-card-head"><h4>🎒 Packing Checklist</h4><button class="voyara-tool-toggle" type="button" data-tool-toggle="packing">−</button></div><div class="voyara-tool-body" data-tool-body="packing"><div class="voyara-pack-list" id="voyaraPackingList"></div></div></section>
+      <section class="voyara-tool-card wide"><div class="voyara-tool-card-head"><h4>↗ Share Trip</h4><button class="voyara-tool-toggle" type="button" data-tool-toggle="share">−</button></div><div class="voyara-tool-body" data-tool-body="share"><div class="voyara-share-box"><span>Share your Voyara trip with friends or teammates.</span><button type="button" class="primary-button" id="voyaraShareTripBtn2">Share trip ↗</button></div></div></section>
+    </div>`;
+  if(itinerary) itinerary.insertAdjacentElement("afterend",mount); else planner.appendChild(mount);
+
+  const saved=JSON.parse(localStorage.getItem("voyaraToolkitBudget")||"{}");
+  if($("voyaraBudgetInput"))$("voyaraBudgetInput").value=saved.budget||"";
+  if($("voyaraSpentInput"))$("voyaraSpentInput").value=saved.amount||"";
+  $("voyaraBudgetInput")?.addEventListener("input",voyaraRenderBudget);
+  $("voyaraSpentInput")?.addEventListener("input",voyaraRenderBudget);
+  $("voyaraRefreshWeather")?.addEventListener("click",voyaraLoadWeather);
+  $("voyaraShareTripBtn")?.addEventListener("click",voyaraShareTrip);
+  $("voyaraShareTripBtn2")?.addEventListener("click",voyaraShareTrip);
+  mount.querySelectorAll("[data-tool-toggle]").forEach(btn=>btn.addEventListener("click",()=>{
+    const key=btn.dataset.toolToggle, body=mount.querySelector(`[data-tool-body="${key}"]`);
+    if(!body)return; const hidden=body.classList.toggle("hidden"); btn.textContent=hidden?"+":"−";
+  }));
+  voyaraRenderBudget(); voyaraRenderPacking();
+  setTimeout(voyaraLoadWeather,300);
+}
+
 function bindPrintControlsFinal() {
   const button=$("printItineraryPdfBtn");
   if(button&&!button.dataset.bound){button.dataset.bound="true";button.addEventListener("click",printItinerary);}
@@ -2309,6 +2463,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   setTimeout(()=>{
     voyaraRemoveFloatingThemeButtonFinal();
     bindPrintControlsFinal();
+    voyaraEnsureTripToolkit();
     if($("destinationModal")) $("destinationModal").addEventListener("click",e=>{if(e.target.id==="destinationModal")hideElement($("destinationModal"));});
     // Use the final fixed Explore/For You data and controls.
     renderExploreDestinationsFinal($("exploreSearch")?.value||"");

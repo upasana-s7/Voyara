@@ -157,8 +157,16 @@ function voyaraHandleAuthSubmit(event) {
       localStorage.setItem("voyaraUserPhone", identifier);
     }
 
-    voyaraAccountMessage("");
-    showApplication();
+    // Switch screens immediately after a successful signup.
+    // Keep this transition independent of the optional home-page refresh code.
+    hideElement($("welcomeScreen"));
+    showElement($("app"));
+    setText("profileName", name);
+    setText("profileInitial", name.charAt(0).toUpperCase());
+    setText("userGreeting", name);
+    setText("homeUserName", name);
+    showSection("home");
+    try { updateHomeStats(); } catch (_) {}
     return;
   }
 

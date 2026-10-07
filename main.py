@@ -1138,7 +1138,11 @@ def _osm_places_search(
                 "id": f"osm-{item.get('osm_type')}-{item.get('osm_id')}",
                 "name": name,
                 "destination": destination,
-                "category": category,
+                "category": (
+                    "Attractions & Culture"
+                    if category == "all"
+                    else category
+                ),
                 "type": str(
                     item.get("type") or item.get("class") or category
                 ).replace("_", " "),

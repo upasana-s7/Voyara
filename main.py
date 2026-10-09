@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from google import genai
+from google.genai import types
 
 
 # ============================================================
@@ -90,6 +91,10 @@ def generate_with_gemini(prompt):
                 response = gemini_client.models.generate_content(
                     model=model_name,
                     contents=prompt,
+                    config=types.GenerateContentConfig(
+                        max_output_tokens=1800,
+                        temperature=0.4,
+                    ),
                 )
 
                 if not response.text:
@@ -123,7 +128,7 @@ def generate_with_gemini(prompt):
 
                 print(
                     f"Gemini request failed using {model_name} "
-                    f"(attempt {attempt}/2): {error}"
+                    f"(attempt {attempt}/1): {error}"
                 )
 
                 if not temporary_error:

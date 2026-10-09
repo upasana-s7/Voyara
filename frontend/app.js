@@ -3005,7 +3005,15 @@ function voyaraEnsureTripToolkit(){
   if(existingMount){
     if(voyaraActiveToolkitKey!==currentKey){
       let saved={};
-      try{saved=JSON.parse(localStorage.getItem(currentKey)||"{}");}catch(_){}
+      try{
+        const currentSaved=localStorage.getItem(currentKey);
+        const legacySaved=localStorage.getItem("voyaraToolkitBudget");
+        saved=JSON.parse(currentSaved||legacySaved||"{}");
+        if(!currentSaved&&legacySaved&&currentProfile?.destination){
+          localStorage.setItem(currentKey,JSON.stringify(saved));
+          localStorage.removeItem("voyaraToolkitBudget");
+        }
+      }catch(_){}
       if($("voyaraBudgetInput"))$("voyaraBudgetInput").value=saved.budget||voyaraProfileBudgetValue()||"";
       if($("voyaraSpentInput"))$("voyaraSpentInput").value=saved.amount||"";
       voyaraActiveToolkitKey=currentKey;
@@ -3037,7 +3045,7 @@ function voyaraEnsureTripToolkit(){
     const currentSaved=localStorage.getItem(currentKey);
     const legacySaved=localStorage.getItem("voyaraToolkitBudget");
     saved=JSON.parse(currentSaved||legacySaved||"{}");
-    if(!currentSaved&&legacySaved){
+    if(!currentSaved&&legacySaved&&currentProfile?.destination){
       localStorage.setItem(currentKey,JSON.stringify(saved));
       localStorage.removeItem("voyaraToolkitBudget");
     }

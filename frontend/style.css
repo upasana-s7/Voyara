@@ -3122,3 +3122,6 @@ body[data-theme="dark"] .welcome-screen{background:radial-gradient(ellipse at 12
 .voyara-expense-item small{margin-top:3px;font-size:11px;opacity:.65}
 .voyara-expense-item>button{border:0;border-radius:8px;padding:4px 9px;background:#f8ece8;color:#8b392b;cursor:pointer;font-size:18px}
 @media(max-width:700px){.voyara-expense-form{grid-template-columns:1fr 1fr}.voyara-expense-form input:first-child{grid-column:1/-1}.voyara-expense-form .primary-button{grid-column:1/-1}.voyara-regenerate-day-btn{margin:7px 0 0;display:flex;width:max-content}.voyara-for-you-filters label{min-width:100%;}}
+
+.voyara-expense-category-totals{margin-top:12px}.voyara-expense-category-totals>div{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}.voyara-expense-category-totals span{display:flex;gap:8px;align-items:center;padding:6px 9px;border:1px solid var(--border);border-radius:999px;background:var(--white)}.voyara-expense-category-totals b{font-weight:800}
+.voyara-place-distance{display:block;margin-top:4px;color:var(--muted,#68766b);font-size:11px}

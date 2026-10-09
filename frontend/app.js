@@ -137,7 +137,7 @@ function voyaraHandleAuthSubmit(event) {
       return;
     }
 
-    const isEmail = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(identifier);
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
     const newAccount = {
       name,
       email: isEmail ? identifier : "",
@@ -272,6 +272,10 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function initializeVoyara() {
+  // Warm the free backend while the user is signing in or exploring,
+  // so the first itinerary request is less likely to pay the cold-start delay.
+  fetch(`${API_BASE}/api/health`, { cache: "no-store" }).catch(() => {});
+
   bindNavigation();
   bindWelcomeScreen();
   bindPlanner();

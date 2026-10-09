@@ -2690,7 +2690,7 @@ async function searchForYouPlaces() {
   if(searchButton)searchButton.disabled=true;
   if($("forYouCategory"))$("forYouCategory").disabled=true;
   if(note)note.textContent="";
-  const categories=category==="all"?VOYARA_FOR_YOU_CATEGORIES:[category];
+  const categories=[category];
   try {
     const results=[];
     const sources=new Set();

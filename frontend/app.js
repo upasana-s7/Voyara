@@ -699,10 +699,14 @@ async function createItinerary() {
         const dataResult = await response.json();
 
         if (!response.ok || !dataResult.success) {
-          throw new Error(
+          const apiError = new Error(
             dataResult.error ||
             "Unable to create the itinerary."
           );
+          // A completed API error is not a cold-start/network failure.
+          // Avoid repeating an expensive AI request when the server already replied.
+          apiError.retryable = false;
+          throw apiError;
         }
 
         result = dataResult;
@@ -711,12 +715,14 @@ async function createItinerary() {
         clearTimeout(timeout);
         lastError = error;
 
-        if (attempt === 1) {
+        if (attempt === 1 && error.retryable !== false) {
           if (plannerStatus) {
             plannerStatus.textContent =
               "Waking Voyara's travel engine and trying again...";
           }
           await new Promise(resolve => setTimeout(resolve, 1500));
+        } else {
+          break;
         }
       }
     }

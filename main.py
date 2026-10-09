@@ -935,7 +935,8 @@ def _google_places_search(
         "places.googleMapsUri,"
         "places.primaryTypeDisplayName,"
         "places.location,"
-        "places.reviews"
+        "places.reviews,"
+        "places.editorialSummary"
     )
 
     data = _json_request(
@@ -1038,6 +1039,7 @@ def _google_places_search(
             "ratingCount": place.get(
                 "userRatingCount"
             ),
+            "description": ((place.get("editorialSummary") or {}).get("text") or ""),
             "priceLevel": place.get("priceLevel"),
             "openNow": (place.get("currentOpeningHours") or {}).get("openNow"),
             "reviews": [

@@ -2435,6 +2435,7 @@ const VOYARA_EXPLORE_DESTINATIONS_FINAL = [
 
 let voyaraExploreSearchRequest = 0;
 let voyaraForYouResults = [];
+let voyaraForYouRequestId = 0;
 
 const VOYARA_FOR_YOU_SAMPLE_RESULTS = [
   {id:"sample-goa-baga",name:"Baga Beach",destination:"Goa",category:"Nature & Outdoors",description:"Popular North Goa beach for sunsets, water activities and a lively coastal atmosphere.",rating:null},
@@ -2669,6 +2670,7 @@ function renderForYouResults() {
 }
 
 async function searchForYouPlaces() {
+  const requestId=++voyaraForYouRequestId;
   const destination=$("forYouSearch")?.value.trim()||"";
   const category=$("forYouCategory")?.value||"all";
   const grid=$("recommendationGrid");
@@ -2680,6 +2682,9 @@ async function searchForYouPlaces() {
     return;
   }
   grid.innerHTML=`<div class="for-you-loading"><strong>Finding places in ${escapeHtml(destination)}...</strong><span>Searching the selected category and preparing recommendations.</span></div>`;
+  const searchButton=$("forYouSearchBtn");
+  if(searchButton)searchButton.disabled=true;
+  if($("forYouCategory"))$("forYouCategory").disabled=true;
   if(note)note.textContent="";
   const categories=category==="all"?VOYARA_FOR_YOU_CATEGORIES:[category];
   try {
@@ -2703,6 +2708,7 @@ async function searchForYouPlaces() {
       }catch(_){return null;}
       finally{clearTimeout(timeout);}
     }));
+    if(requestId!==voyaraForYouRequestId)return;
     for(const data of batches){
       if(!data)continue;
       sources.add(data.source||"");
@@ -2720,8 +2726,14 @@ async function searchForYouPlaces() {
     if(note && results.length) note.textContent=sources.has("Google Places")?"Recommendations are from Google Places. Ratings are shown only when Google supplies them.":"Recommendations are from OpenStreetMap. Ratings are shown only when a real rating is supplied by the source.";
     renderForYouResults();
   } catch(error) {
+    if(requestId!==voyaraForYouRequestId)return;
     voyaraForYouResults=[];
     grid.innerHTML=`<div class="for-you-empty"><strong>Recommendations are temporarily unavailable.</strong><span>Check that the backend is running and try again.</span></div>`;
+  } finally {
+    if(requestId===voyaraForYouRequestId){
+      if(searchButton)searchButton.disabled=false;
+      if($("forYouCategory"))$("forYouCategory").disabled=false;
+    }
   }
 }
 function bindRecommendationsFinal() {

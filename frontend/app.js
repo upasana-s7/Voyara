@@ -2637,15 +2637,9 @@ function bindExploreFinal() {
 }
 
 function voyaraForYouCard(item) {
-  const rating=item.rating!==null&&item.rating!==undefined&&Number.isFinite(Number(item.rating))
-    ? `<div class="voyara-place-rating">★ ${Number(item.rating).toFixed(1)} <small>Google Maps rating${item.ratingCount? ` · ${Number(item.ratingCount).toLocaleString()} ratings`:""}</small></div>`
-    : `<div class="voyara-place-rating unavailable">Google rating unavailable</div>`;
-  const review=Array.isArray(item.reviews)?item.reviews.find(r=>r&&String(r.text||"").trim()):null;
-  const shortReview=review
-    ? `<p class="voyara-place-short-review">“${escapeHtml(review.text)}” <small>— ${escapeHtml(review.author||"Google Maps reviewer")}</small></p>`
-    : `<p class="voyara-place-short-review">${escapeHtml(String(item.description||"Open Google Maps to see current visitor feedback."))}</p>`;
-  const mapUrl=item.mapUrl||`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.name+", "+item.destination)}`;
-  return `<article class="voyara-place-card"><div class="voyara-place-card-body"><span class="voyara-place-type">${escapeHtml(item.category||item.type||"Place")}</span><h4>${escapeHtml(item.name)}</h4>${rating}${shortReview}<p class="voyara-place-actions"><a href="${escapeHtml(mapUrl)}" target="_blank" rel="noopener noreferrer">View on Google Maps ↗</a></p></div></article>`;
+  const description=String(item.description||"A place worth exploring during your trip.").trim();
+  const mapUrl=`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.name+", "+item.destination)}`;
+  return `<article class="voyara-place-card"><div class="voyara-place-card-body"><span class="voyara-place-type">${escapeHtml(item.category||item.type||"Place")}</span><h4>${escapeHtml(item.name)}</h4><p class="voyara-place-short-review">${escapeHtml(description)}</p><p class="voyara-place-actions"><a href="${escapeHtml(mapUrl)}" target="_blank" rel="noopener noreferrer">View on Google Maps ↗</a></p></div></article>`;
 }
 
 function voyaraPriceLevelNumber(value) {
@@ -2678,87 +2672,41 @@ function voyaraApplyForYouFilters(items) {
 function renderForYouResults() {
   const grid=$("recommendationGrid"); if(!grid)return;
   const category=$("forYouCategory")?.value||"all";
-  if(!voyaraForYouResults.length){grid.innerHTML=`<div class="for-you-empty"><strong>Search a destination to discover places.</strong><span>Choose one of the five categories or view all five categories together.</span></div>`;return;}
-  const filteredResults=voyaraForYouResults;
-  const groups=category==="all" ? VOYARA_FOR_YOU_CATEGORIES.map(cat=>({cat,items:filteredResults.filter(x=>x.category===cat).slice(0,6)})).filter(g=>g.items.length) : [{cat:category,items:filteredResults.filter(x=>x.category===cat).slice(0,6)}];
-  if(!groups.some(g=>g.items.length)){grid.innerHTML=`<div class="for-you-empty"><strong>No places were returned for this destination.</strong><span>Try another category or destination. Ratings and visitor reviews appear when Google Places provides them.</span></div>`;return;}
+  const destination=$("forYouSearch")?.value.trim()||"Kerala";
+  if(!voyaraForYouResults.length){grid.innerHTML=`<div class="for-you-empty"><strong>Choose Goa or Kerala to see recommendations.</strong><span>Voyara includes four places for each category.</span></div>`;return;}
+  const groups=category==="all"
+    ? VOYARA_FOR_YOU_CATEGORIES.map(cat=>({cat,items:voyaraForYouResults.filter(x=>x.category===cat).slice(0,4)})).filter(g=>g.items.length)
+    : [{cat:category,items:voyaraForYouResults.filter(x=>x.category===category).slice(0,4)}];
+  if(!groups.some(g=>g.items.length)){grid.innerHTML=`<div class="for-you-empty"><strong>No recommendations found.</strong><span>Try Goa or Kerala.</span></div>`;return;}
   grid.innerHTML=groups.map(g=>`<section class="voyara-category-results"><div class="voyara-category-results-heading"><div><span class="eyebrow">${escapeHtml(g.cat)}</span><h3>${g.cat}</h3></div><span>${g.items.length} recommendations</span></div><div class="voyara-category-results-grid">${g.items.map(voyaraForYouCard).join("")}</div></section>`).join("");
   grid.querySelectorAll("[data-save-final-place]").forEach(btn=>btn.addEventListener("click",()=>{const item=voyaraForYouResults.find(x=>String(x.id)===String(btn.dataset.saveFinalPlace));if(!item)return;let saved=voyaraGetJSON(VOYARA_SAVED_PLACES_KEY,[]);const idx=saved.findIndex(x=>String(x.id)===String(item.id));if(idx>=0){saved.splice(idx,1);btn.textContent="♡ Wishlist";}else{saved.push({...item,savedAt:new Date().toISOString()});btn.textContent="✓ Saved";}voyaraSetJSON(VOYARA_SAVED_PLACES_KEY,saved);updateHomeStats();}));
   grid.querySelectorAll("[data-add-final-place]").forEach(btn=>btn.addEventListener("click",()=>{const item=voyaraForYouResults.find(x=>String(x.id)===String(btn.dataset.addFinalPlace));if(!item)return;window.voyaraPlanDestination(item.destination);const pref=$("preferences");if(pref)pref.value=`${pref.value?pref.value+"; ":""}Include ${item.name}`;voyaraToast(`${item.name} added to your trip preferences.`);}));
 }
 
 async function searchForYouPlaces() {
-  const requestId=++voyaraForYouRequestId;
-  const destination=$("forYouSearch")?.value.trim()||"";
+  ++voyaraForYouRequestId;
+  const input=$("forYouSearch");
+  const destination=(input?.value.trim()||"Kerala");
   const category=$("forYouCategory")?.value||"all";
   const grid=$("recommendationGrid");
   const note=$("forYouSourceNote");
-  if(!destination){
-    if($("forYouSearchBtn"))$("forYouSearchBtn").disabled=false;
-    if($("forYouCategory"))$("forYouCategory").disabled=false;
-    voyaraForYouResults=VOYARA_FOR_YOU_SAMPLE_RESULTS.slice();
-    if(note)note.textContent="Demo recommendations for Goa and Kerala are available below.";
+  if(!/^(goa|kerala)$/i.test(destination)){
+    voyaraForYouResults=[];
+    if(note)note.textContent="Recommendations are currently curated for Goa and Kerala.";
     renderForYouResults();
     return;
   }
-  grid.innerHTML=`<div class="for-you-loading"><strong>Finding places in ${escapeHtml(destination)}...</strong><span>Searching the selected category and preparing recommendations.</span></div>`;
-  const searchButton=$("forYouSearchBtn");
-  if(searchButton)searchButton.disabled=true;
-  if($("forYouCategory"))$("forYouCategory").disabled=true;
-  if(note)note.textContent="";
-  const categories=[category];
-  try {
-    const results=[];
-    const sources=new Set();
-    // Fetch categories in parallel so "all five" doesn't wait through five
-    // sequential network timeouts. Each request has its own timeout.
-    const batches=await Promise.all(categories.map(async cat=>{
-      const controller=new AbortController();
-      const timeout=setTimeout(()=>controller.abort(),10000);
-      try{
-        const response=await fetch(`${API_BASE}/api/places`,{
-          method:"POST",
-          headers:{"Content-Type":"application/json"},
-          body:JSON.stringify({destination,category:cat,query:""}),
-          signal:controller.signal
-        });
-        let data={};
-        try{data=await response.json();}catch(_){}
-        return response.ok&&data.success?data:null;
-      }catch(_){return null;}
-      finally{clearTimeout(timeout);}
-    }));
-    if(requestId!==voyaraForYouRequestId)return;
-    for(const data of batches){
-      if(!data)continue;
-      sources.add(data.source||"");
-      (data.results||[]).forEach(item=>{
-        if(!results.some(existing=>String(existing.id)===String(item.id)))results.push(item);
-      });
-    }
-
-    if(/^(goa|kerala)$/i.test(destination)){
-      const destinationSamples=VOYARA_FOR_YOU_SAMPLE_RESULTS.filter(item=>item.destination.toLowerCase()===destination.toLowerCase()&&(category==="all"||item.category===category));
-      const merged=[...results];
-      for(const sample of destinationSamples){if(merged.length>=8)break;if(!merged.some(item=>String(item.name).toLowerCase()===sample.name.toLowerCase()))merged.push(sample);}
-      voyaraForYouResults=merged.slice(0,8);
-      if(note)note.textContent="Place suggestions for "+destination+". Google ratings and real visitor reviews appear only when Google Places returns them.";
-    }else{
-      voyaraForYouResults=results.slice(0,8);
-      if(!results.length&&note)note.textContent="No places were returned. Try Goa or Kerala, or check the backend service.";
-    }
-    renderForYouResults();
-  } catch(error) {
-    if(requestId!==voyaraForYouRequestId)return;
-    voyaraForYouResults=[];
-    grid.innerHTML=`<div class="for-you-empty"><strong>Recommendations are temporarily unavailable.</strong><span>Check that the backend is running and try again.</span></div>`;
-  } finally {
-    if(requestId===voyaraForYouRequestId){
-      if(searchButton)searchButton.disabled=false;
-      if($("forYouCategory"))$("forYouCategory").disabled=false;
-    }
-  }
+  const normalized=destination.toLowerCase();
+  voyaraForYouResults=VOYARA_FOR_YOU_SAMPLE_RESULTS
+    .filter(item=>String(item.destination||"").toLowerCase()===normalized)
+    .filter(item=>category==="all"||item.category===category)
+    .reduce((unique,item)=>unique.some(x=>x.category===item.category&&x.name.toLowerCase()===item.name.toLowerCase())?unique.concat([]):unique.concat([item]),[]);
+  const categories=category==="all"?VOYARA_FOR_YOU_CATEGORIES:[category];
+  voyaraForYouResults=categories.flatMap(cat=>voyaraForYouResults.filter(item=>item.category===cat).slice(0,4));
+  if(note)note.textContent="Curated place suggestions for "+(normalized==="goa"?"Goa":"Kerala")+". Open Google Maps from a card for current place details.";
+  renderForYouResults();
 }
+
 function bindRecommendationsFinal() {
   const input=$("forYouSearch"), select=$("forYouCategory"), button=$("forYouSearchBtn");
   if(!input||!select||!button)return;
@@ -2767,7 +2715,8 @@ function bindRecommendationsFinal() {
   input.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();run();}});
   select.addEventListener("change",()=>{if(input.value.trim())run();});
   ["forYouMinRating","forYouBudgetFilter","forYouDistanceFilter","forYouOpenNow"].forEach(id=>$(id)?.addEventListener("change",renderForYouResults));
-  renderForYouResults();
+  if(!input.value.trim())input.value="Kerala";
+  searchForYouPlaces();
 }
 
 /* ============================================================

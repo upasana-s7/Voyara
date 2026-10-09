@@ -864,6 +864,7 @@ function displayItinerary(itinerary) {
   if (itineraryText) itineraryText.innerHTML = rendered;
   if (itineraryPreview) itineraryPreview.innerHTML = rendered;
   if (itineraryContainer) showElement(itineraryContainer);
+  voyaraEnsureTripToolkit();
 
   const plannerSection = $("section-planner");
   if (plannerSection) plannerSection.classList.add("active-section");
@@ -2756,6 +2757,23 @@ function bindRecommendationsFinal() {
 
 const VOYARA_TOOLKIT_STYLE_ID = "voyaraToolkitStyles";
 const VOYARA_EXPENSES_KEY = "voyaraToolkitExpenses";
+let voyaraActiveToolkitKey = "";
+
+function voyaraTripStorageSuffix(){
+  const profile=currentProfile||{};
+  const parts=[
+    profile.destination||$("destination")?.value||"general",
+    profile.days||$("days")?.value||"trip",
+    profile.travelMonth||"unspecified"
+  ];
+  return parts.join("|").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,120)||"general";
+}
+function voyaraBudgetStorageKey(){return "voyaraToolkitBudget:"+voyaraTripStorageSuffix();}
+function voyaraExpenseStorageKey(){return VOYARA_EXPENSES_KEY+":"+voyaraTripStorageSuffix();}
+function voyaraProfileBudgetValue(){
+  const raw=String(currentProfile?.budget||"").replace(/[^0-9.]/g,"");
+  return Number(raw)>0?Number(raw):"";
+}
 
 
 function voyaraEnsureTripToolkitStyles() {
@@ -2808,7 +2826,7 @@ function voyaraMoney(value){
 
 function voyaraGetExpenses(){
   try {
-    const value=JSON.parse(localStorage.getItem(VOYARA_EXPENSES_KEY)||"[]");
+    const value=JSON.parse(localStorage.getItem(voyaraExpenseStorageKey())||"[]");
     return Array.isArray(value)?value:[];
   } catch (_) { return []; }
 }
@@ -2829,7 +2847,7 @@ function voyaraRenderBudget(){
   if($("voyaraSpentValue"))$("voyaraSpentValue").textContent=voyaraMoney(amount);
   if($("voyaraRemainingValue"))$("voyaraRemainingValue").textContent=voyaraMoney(budget-amount);
   if($("voyaraBudgetFill"))$("voyaraBudgetFill").style.width=percent+"%";
-  localStorage.setItem("voyaraToolkitBudget",JSON.stringify({budget,amount:otherAmount}));
+  localStorage.setItem(voyaraBudgetStorageKey(),JSON.stringify({budget,amount:otherAmount}));
 
   const days=voyaraTripDayCount(), dailyBudget=budget/days;
   const byDay=Array.from({length:days},(_,index)=>({day:index+1,total:0}));
@@ -2851,7 +2869,7 @@ function voyaraRenderBudget(){
     list.innerHTML=expenses.length?expenses.map(item=>`<div class="voyara-expense-item"><div><strong>${escapeHtml(item.description||item.category||"Expense")}</strong><small>${escapeHtml(item.category||"Other")} · Day ${Number(item.day)||1}</small></div><strong>${voyaraMoney(item.amount)}</strong><button type="button" data-delete-expense="${escapeHtml(item.id)}" aria-label="Delete expense">×</button></div>`).join(""):'<p class="voyara-muted">Your itemized expenses will appear here.</p>';
     list.querySelectorAll("[data-delete-expense]").forEach(button=>button.addEventListener("click",()=>{
       const next=voyaraGetExpenses().filter(item=>String(item.id)!==String(button.dataset.deleteExpense));
-      localStorage.setItem(VOYARA_EXPENSES_KEY,JSON.stringify(next));
+      localStorage.setItem(voyaraExpenseStorageKey(),JSON.stringify(next));
       voyaraRenderBudget();
     }));
   }
@@ -2865,7 +2883,7 @@ function voyaraAddExpense(){
   if(dayNumber<1||dayNumber>31){voyaraToast("Choose a trip day between 1 and 31.");day?.focus();return;}
   const expenses=voyaraGetExpenses();
   expenses.push({id:`expense-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,description:description.value.trim(),category:$("voyaraExpenseCategory")?.value||"Other",amount:Math.round(value),day:dayNumber,createdAt:new Date().toISOString()});
-  localStorage.setItem(VOYARA_EXPENSES_KEY,JSON.stringify(expenses));
+  localStorage.setItem(voyaraExpenseStorageKey(),JSON.stringify(expenses));
   description.value="";amount.value="";
   voyaraRenderBudget();
 }
@@ -2981,7 +2999,20 @@ function voyaraTryOpenSharedTrip(){
 function voyaraEnsureTripToolkit(){
   voyaraEnsureTripToolkitStyles();
   const planner=$("section-planner"), toolkitSection=$("section-toolkit"), itinerary=$("itineraryContainer");
-  if((!planner&&!toolkitSection)||$("voyaraTripToolkit"))return;
+  const existingMount=$("voyaraTripToolkit");
+  const currentKey=voyaraBudgetStorageKey();
+  if(!planner&&!toolkitSection&&!existingMount)return;
+  if(existingMount){
+    if(voyaraActiveToolkitKey!==currentKey){
+      let saved={};
+      try{saved=JSON.parse(localStorage.getItem(currentKey)||"{}");}catch(_){}
+      if($("voyaraBudgetInput"))$("voyaraBudgetInput").value=saved.budget||voyaraProfileBudgetValue()||"";
+      if($("voyaraSpentInput"))$("voyaraSpentInput").value=saved.amount||"";
+      voyaraActiveToolkitKey=currentKey;
+      voyaraRenderBudget();
+    }
+    return;
+  }
   const mount=document.createElement("div");
   mount.id="voyaraTripToolkit";
   mount.className="voyara-trip-toolkit";
@@ -3000,9 +3031,20 @@ function voyaraEnsureTripToolkit(){
   else if(itinerary) itinerary.insertAdjacentElement("afterend",mount);
   else if(planner) planner.appendChild(mount);
 
-  const saved=JSON.parse(localStorage.getItem("voyaraToolkitBudget")||"{}");
-  if($("voyaraBudgetInput"))$("voyaraBudgetInput").value=saved.budget||"";
+  const currentKey=voyaraBudgetStorageKey();
+  let saved={};
+  try{
+    const currentSaved=localStorage.getItem(currentKey);
+    const legacySaved=localStorage.getItem("voyaraToolkitBudget");
+    saved=JSON.parse(currentSaved||legacySaved||"{}");
+    if(!currentSaved&&legacySaved){
+      localStorage.setItem(currentKey,JSON.stringify(saved));
+      localStorage.removeItem("voyaraToolkitBudget");
+    }
+  }catch(_){}
+  if($("voyaraBudgetInput"))$("voyaraBudgetInput").value=saved.budget||voyaraProfileBudgetValue()||"";
   if($("voyaraSpentInput"))$("voyaraSpentInput").value=saved.amount||"";
+  voyaraActiveToolkitKey=currentKey;
   $("voyaraBudgetInput")?.addEventListener("input",voyaraRenderBudget);
   $("voyaraSpentInput")?.addEventListener("input",voyaraRenderBudget);
   $("voyaraAddExpenseBtn")?.addEventListener("click",voyaraAddExpense);

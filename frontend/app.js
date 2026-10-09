@@ -815,7 +815,7 @@ function renderVoyaraItinerary(markdown) {
     if (dayMatch) {
       closeList();
       const title = dayMatch[2] ? `Day ${dayMatch[1]} — ${cleanHeading(dayMatch[2])}` : `Day ${dayMatch[1]}`;
-      html.push(`<h3 class="voyara-day-heading">${voyaraInlineFormat(title)}</h3>`);
+      html.push(`<h3 class="voyara-day-heading">${voyaraInlineFormat(title)} <button type="button" class="voyara-regenerate-day-btn" data-regenerate-day="${Number(dayMatch[1])}">↻ Regenerate day</button></h3>`);
       continue;
     }
 
@@ -823,7 +823,7 @@ function renderVoyaraItinerary(markdown) {
     if (/^day\s*\d+/i.test(cleaned)) {
       const match = cleaned.match(/^day\s*(\d+)\s*(?:[:—-]\s*)?(.*)$/i);
       closeList();
-      html.push(`<h3 class="voyara-day-heading">${voyaraInlineFormat(match[2] ? `Day ${match[1]} — ${match[2]}` : `Day ${match[1]}`)}</h3>`);
+      html.push(`<h3 class="voyara-day-heading">${voyaraInlineFormat(match[2] ? `Day ${match[1]} — ${match[2]}` : `Day ${match[1]}`)} <button type="button" class="voyara-regenerate-day-btn" data-regenerate-day="${Number(match[1])}">↻ Regenerate day</button></h3>`);
       continue;
     }
 
@@ -879,6 +879,17 @@ function displayItinerary(itinerary) {
 // ============================================================
 
 function bindItineraryActions() {
+  const itineraryPreview = $("itineraryPreview");
+  if (itineraryPreview && !itineraryPreview.dataset.dayRegenerationBound) {
+    itineraryPreview.dataset.dayRegenerationBound = "true";
+    itineraryPreview.addEventListener("click", async (event) => {
+      const button = event.target.closest("[data-regenerate-day]");
+      if (!button) return;
+      const dayNumber = Number(button.dataset.regenerateDay);
+      if (!Number.isInteger(dayNumber) || dayNumber < 1) return;
+      await regenerateSingleDay(dayNumber, button);
+    });
+  }
   const saveTripButton = $("saveTripBtn");
 
   if (saveTripButton) {
@@ -915,6 +926,57 @@ function bindItineraryActions() {
     downloadButton.addEventListener("click", () => {
       downloadItinerary();
     });
+  }
+}
+
+async function regenerateSingleDay(dayNumber, button) {
+  if (!currentItinerary) {
+    alert("Create an itinerary first.");
+    return;
+  }
+
+  const oldLabel = button.textContent;
+  button.disabled = true;
+  button.textContent = "Regenerating...";
+
+  try {
+    const response = await fetch(`${API_BASE}/api/regenerate-day`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        itinerary: currentItinerary,
+        profile: currentProfile,
+        day_number: dayNumber
+      })
+    });
+    const result = await response.json();
+    if (!response.ok || !result.success || !result.day) {
+      throw new Error(result.error || "Unable to regenerate this day.");
+    }
+
+    const dayPattern = new RegExp(
+      "(^|\\n)(?:#{1,6}\\s*)?Day\\s*" + dayNumber +
+      "\\b[^\\n]*[\\s\\S]*?(?=\\n(?:#{1,6}\\s*)?Day\\s*\\d+\\b|\\n#{1,6}\\s*(?:Local Food to Try|Getting Around|Useful Tips|Trip Overview|Quick Summary)\\b|$)",
+      "i"
+    );
+    if (!dayPattern.test(currentItinerary)) {
+      throw new Error("Couldn't locate that day in the current itinerary. Your existing plan has been kept unchanged.");
+    }
+
+    currentItinerary = currentItinerary.replace(
+      dayPattern,
+      (matched, prefix) => prefix + "\\n" + result.day.trim()
+    );
+    displayItinerary(currentItinerary);
+    voyaraToast(`Day ${dayNumber} regenerated.`);
+  } catch (error) {
+    console.error("Single-day regeneration error:", error);
+    alert(error.message || "Unable to regenerate this day right now.");
+  } finally {
+    if (button.isConnected) {
+      button.disabled = false;
+      button.textContent = oldLabel;
+    }
   }
 }
 

@@ -93,7 +93,6 @@ def generate_with_gemini(prompt):
                     contents=prompt,
                     config=types.GenerateContentConfig(
                         max_output_tokens=1800,
-                        temperature=0.4,
                     ),
                 )
 

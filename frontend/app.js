@@ -316,16 +316,8 @@ function bindWelcomeScreen() {
     nameForm.addEventListener("submit", voyaraHandleAuthSubmit);
   }
 
-  // Handle the account button directly as well, so browser form behavior
-  // cannot prevent the prototype auth flow from running.
-  const authSubmitButton = $("authSubmitBtn");
-  if (authSubmitButton && !authSubmitButton.dataset.authClickBound) {
-    authSubmitButton.dataset.authClickBound = "true";
-    authSubmitButton.addEventListener("click", (event) => {
-      event.preventDefault();
-      voyaraHandleAuthSubmit(event);
-    });
-  }
+  // The form submit event handles this button exactly once.
+  // A separate click handler was invoking signup/login twice.
 
   const tabs = document.querySelectorAll(".voyara-auth-tab");
   tabs.forEach((tab) => {
@@ -343,6 +335,11 @@ function bindWelcomeScreen() {
 
       if (nameField) {
         nameField.classList.toggle("hidden", !signup);
+      }
+      const nameInput = $("nameInput");
+      if (nameInput) {
+        nameInput.required = signup;
+        if (!signup) nameInput.setCustomValidity("");
       }
       if (submit) {
         submit.innerHTML = signup

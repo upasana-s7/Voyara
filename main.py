@@ -470,6 +470,68 @@ def modify_trip():
 
 
 # ============================================================
+# REGENERATE ONE DAY
+# ============================================================
+
+@app.route("/api/regenerate-day", methods=["POST"])
+def regenerate_trip_day():
+    data = request.get_json(silent=True) or {}
+    itinerary = str(data.get("itinerary", "")).strip()
+    profile = data.get("profile", {})
+    try:
+        day_number = int(data.get("day_number", 0))
+    except (TypeError, ValueError):
+        day_number = 0
+
+    if not itinerary:
+        return jsonify({
+            "success": False,
+            "error": "Create an itinerary before regenerating a day."
+        }), 400
+
+    if day_number < 1 or day_number > 31:
+        return jsonify({
+            "success": False,
+            "error": "Choose a valid day to regenerate."
+        }), 400
+
+    prompt = f"""
+You are Voyara, a practical travel planner.
+
+Generate a replacement for Day {day_number} only.
+Do not rewrite other days or the general trip sections.
+
+TRIP DETAILS
+============
+{profile}
+
+CURRENT ITINERARY
+=================
+{itinerary}
+
+Requirements:
+- Return only the replacement day, beginning with a heading such as
+  '### Day {day_number} — short theme'.
+- Include morning, afternoon, and evening activities where appropriate.
+- Group nearby attractions and keep the schedule realistic, with meal/rest breaks.
+- Respect the trip's original destination, traveller count, interests and budget.
+- Include a rough daily cost and approximate travel durations only when useful.
+- Label costs and travel durations as estimates, not confirmed/live data.
+- Do not invent opening hours, bookings, ticket prices or live availability.
+- Do not change any other day. Do not include a table or introductory explanation.
+"""
+    try:
+        day = generate_with_gemini(prompt)
+        return jsonify({"success": True, "day": day})
+    except Exception as error:
+        print("REGENERATE DAY ERROR:", error)
+        return jsonify({
+            "success": False,
+            "error": "This day could not be regenerated right now. Please try again."
+        }), 503
+
+
+# ============================================================
 # REGENERATE TRIP
 # ============================================================
 

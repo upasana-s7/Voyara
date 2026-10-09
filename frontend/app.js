@@ -2681,30 +2681,34 @@ async function searchForYouPlaces() {
   }
   grid.innerHTML=`<div class="for-you-loading"><strong>Finding places in ${escapeHtml(destination)}...</strong><span>Searching the selected category and preparing recommendations.</span></div>`;
   if(note)note.textContent="";
-  const categories=[category];
+  const categories=category==="all"?VOYARA_FOR_YOU_CATEGORIES:[category];
   try {
     const results=[];
     const sources=new Set();
-
-    for(const cat of categories){
-      try {
-        const controller=new AbortController();
-        const timeout=setTimeout(()=>controller.abort(),10000);
+    // Fetch categories in parallel so "all five" doesn't wait through five
+    // sequential network timeouts. Each request has its own timeout.
+    const batches=await Promise.all(categories.map(async cat=>{
+      const controller=new AbortController();
+      const timeout=setTimeout(()=>controller.abort(),10000);
+      try{
         const response=await fetch(`${API_BASE}/api/places`,{
           method:"POST",
           headers:{"Content-Type":"application/json"},
           body:JSON.stringify({destination,category:cat,query:""}),
           signal:controller.signal
         });
-        clearTimeout(timeout);
         let data={};
-        try { data=await response.json(); } catch (_) {}
-        if(!response.ok||!data.success) continue;
-        sources.add(data.source||"");
-        (data.results||[]).forEach(item=>{
-          if(!results.some(r=>String(r.id)===String(item.id))) results.push(item);
-        });
-      } catch (_) {}
+        try{data=await response.json();}catch(_){}
+        return response.ok&&data.success?data:null;
+      }catch(_){return null;}
+      finally{clearTimeout(timeout);}
+    }));
+    for(const data of batches){
+      if(!data)continue;
+      sources.add(data.source||"");
+      (data.results||[]).forEach(item=>{
+        if(!results.some(existing=>String(existing.id)===String(item.id)))results.push(item);
+      });
     }
 
     if(!results.length && /^(goa|kerala)$/i.test(destination)){

@@ -2723,7 +2723,7 @@ async function searchForYouPlaces() {
 
     if(!results.length && /^(goa|kerala)$/i.test(destination)){
       voyaraForYouResults=[];
-      if(note)note.textContent="Live Google ratings and visitor reviews are required. No matching reviewed places were returned; please try another destination.";
+      if(note)note.textContent="No live places were returned by the place search for this destination and category. Try another category or destination; ratings are displayed whenever the source supplies them.";
     }else{
       voyaraForYouResults=results;
     }

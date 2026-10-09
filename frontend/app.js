@@ -364,22 +364,36 @@ function bindWelcomeScreen() {
     googleSignInButton.addEventListener("click", (event) => {
       event.preventDefault();
       const nameInput = $("nameInput");
-      const name = (nameInput?.value || "").trim();
+      const name = String(nameInput?.value || "").trim().replace(/\\s+/g, " ");
       if (!name) {
-        voyaraAccountMessage("Please type your name in the Your name field first.");
-        if (nameInput) { nameInput.classList.remove("hidden"); nameInput.focus(); }
+        voyaraAccountMessage("Please enter your name above, then click Continue with your name.");
+        nameInput?.focus();
         return;
       }
-      // Name-only quick access; this is not Google account authentication.
-      const identifier = "guest:" + name.toLocaleLowerCase();
-      localStorage.setItem("voyaraUserName", name);
-      localStorage.setItem("voyaraUserIdentifier", identifier);
-      localStorage.setItem("voyaraGuestSession", "true");
-      const accounts = voyaraGetAccounts();
-      accounts[identifier] = { ...(accounts[identifier] || {}), name, email: "", phone: "", password: "", provider: "name-only", createdAt: accounts[identifier]?.createdAt || new Date().toISOString() };
-      voyaraSaveAccounts(accounts);
-      voyaraAccountMessage("");
-      showApplication();
+
+      try {
+        const identifier = "guest:" + name.toLocaleLowerCase();
+        const accounts = voyaraGetAccounts();
+        accounts[identifier] = {
+          ...(accounts[identifier] || {}),
+          name,
+          email: "",
+          phone: "",
+          password: "",
+          provider: "name-only",
+          createdAt: accounts[identifier]?.createdAt || new Date().toISOString()
+        };
+        voyaraSaveAccounts(accounts);
+        localStorage.setItem("voyaraUserName", name);
+        localStorage.setItem("voyaraUserIdentifier", identifier);
+        localStorage.setItem("voyaraGuestSession", "true");
+        const message = $("voyaraAuthMessage");
+        if (message) message.classList.add("hidden");
+        showApplication();
+      } catch (error) {
+        console.error("Voyara quick sign-in failed:", error);
+        voyaraAccountMessage("Sign-in could not be saved in this browser. Please enable site storage and try again.");
+      }
     });
   }
 }

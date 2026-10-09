@@ -1371,5 +1371,16 @@
   }, true);
 })();
 </script>
+<script>
+  // Register the app shell cache so saved trips and checklists can be reopened offline.
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("./service-worker.js")
+        .catch(function (error) {
+          console.warn("Voyara offline support could not be enabled:", error);
+        });
+    });
+  }
+</script>
 </body>
 </html>

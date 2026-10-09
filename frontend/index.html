@@ -969,12 +969,22 @@
                             <option value="4">Any listed price level</option>
                         </select>
                     </label>
+                    <label>
+                        <span>Distance from destination centre</span>
+                        <select id="forYouDistanceFilter">
+                            <option value="">Any distance</option>
+                            <option value="5">Within 5 km</option>
+                            <option value="10">Within 10 km</option>
+                            <option value="25">Within 25 km</option>
+                            <option value="50">Within 50 km</option>
+                        </select>
+                    </label>
                     <label class="voyara-open-now-filter">
                         <input id="forYouOpenNow" type="checkbox">
                         <span>Open now (when available)</span>
                     </label>
                 </div>
-                <p class="voyara-source-note">Filters only work when the selected place source supplies that data. Missing ratings, price levels or opening status are never guessed.</p>
+                <p class="voyara-source-note">Filters only work when the selected place source supplies that data. Distance is approximate straight-line distance from the destination centre, not road distance. Missing ratings, price levels or opening status are never guessed.</p>
                 <p class="voyara-source-note for-you-source-note" id="forYouSourceNote"></p>
                 <div class="recommendation-grid" id="recommendationGrid"></div>
             </section>

@@ -815,7 +815,7 @@ function renderVoyaraItinerary(markdown) {
     if (dayMatch) {
       closeList();
       const title = dayMatch[2] ? `Day ${dayMatch[1]} — ${cleanHeading(dayMatch[2])}` : `Day ${dayMatch[1]}`;
-      html.push(`<h3 class="voyara-day-heading">${voyaraInlineFormat(title)} <button type="button" class="voyara-regenerate-day-btn" data-open-day-route="${Number(dayMatch[1])}">↗ Map day</button> <button type="button" class="voyara-regenerate-day-btn" data-regenerate-day="${Number(dayMatch[1])}">↻ Regenerate day</button></h3>`);
+      html.push(`<h3 class="voyara-day-heading">${voyaraInlineFormat(title)}</h3>`);
       continue;
     }
 
@@ -823,7 +823,7 @@ function renderVoyaraItinerary(markdown) {
     if (/^day\s*\d+/i.test(cleaned)) {
       const match = cleaned.match(/^day\s*(\d+)\s*(?:[:—-]\s*)?(.*)$/i);
       closeList();
-      html.push(`<h3 class="voyara-day-heading">${voyaraInlineFormat(match[2] ? `Day ${match[1]} — ${match[2]}` : `Day ${match[1]}`)} <button type="button" class="voyara-regenerate-day-btn" data-open-day-route="${Number(match[1])}">↗ Map day</button> <button type="button" class="voyara-regenerate-day-btn" data-regenerate-day="${Number(match[1])}">↻ Regenerate day</button></h3>`);
+      html.push(`<h3 class="voyara-day-heading">${voyaraInlineFormat(match[2] ? `Day ${match[1]} — ${match[2]}` : `Day ${match[1]}`)}</h3>`);
       continue;
     }
 

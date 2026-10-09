@@ -356,40 +356,35 @@ function bindWelcomeScreen() {
   });
 
   const googleSignInButton = $("googleSignInBtn");
-  if (googleSignInButton && !googleSignInButton.dataset.nameSignInBound) {
-    googleSignInButton.dataset.nameSignInBound = "true";
-    googleSignInButton.addEventListener("click", function (event) {
+  if (googleSignInButton) {
+    // Assign directly instead of stacking listeners across repeated initialization.
+    googleSignInButton.onclick = function (event) {
       event.preventDefault();
       event.stopPropagation();
+
+      const nameInput = $("nameInput");
+      const name = String(nameInput?.value || "").trim().replace(/\\s+/g, " ");
+      if (!name) {
+        voyaraAccountMessage("Type your name in the Your name field first.");
+        nameInput?.focus();
+        return;
+      }
+
       try {
-        const nameInput = document.getElementById("nameInput");
-        const name = (nameInput ? nameInput.value : "").trim().replace(/\s+/g, " ");
-        if (!name) {
-          voyaraAccountMessage("Please type your name above first.");
-          if (nameInput) nameInput.focus();
-          return;
-        }
+        const identifier = "guest:" + name.toLocaleLowerCase();
         localStorage.setItem("voyaraUserName", name);
-        localStorage.setItem("voyaraUserIdentifier", "guest:" + name.toLowerCase());
+        localStorage.setItem("voyaraUserIdentifier", identifier);
         localStorage.setItem("voyaraGuestSession", "true");
-        const welcome = document.getElementById("welcomeScreen");
-        const app = document.getElementById("app");
-        if (welcome) { welcome.classList.add("hidden"); welcome.style.display = "none"; }
-        if (app) { app.classList.remove("hidden"); app.style.display = ""; }
-        ["profileName", "userGreeting", "homeUserName"].forEach(function (id) {
-          const el = document.getElementById(id);
-          if (el) el.textContent = name;
-        });
-        const initial = document.getElementById("profileInitial");
-        if (initial) initial.textContent = name.charAt(0).toUpperCase();
-        try { if (typeof showSection === "function") showSection("home"); } catch (sectionError) { console.warn("Could not switch to home section:", sectionError); }
-        const message = document.getElementById("voyaraAuthMessage");
+        // Use the app's shared transition helper so the welcome screen,
+        // app screen, profile labels, and home section stay in sync.
+        showApplication();
+        const message = $("voyaraAuthMessage");
         if (message) message.classList.add("hidden");
       } catch (error) {
-        console.error("Voyara quick sign-in failed:", error);
-        voyaraAccountMessage("Could not sign in. Please allow site storage and try again.");
+        console.error("Voyara continue-with-name failed:", error);
+        voyaraAccountMessage("Sign-in could not save this session. Enable site storage and try again.");
       }
-    });
+    };
   }
 }
 

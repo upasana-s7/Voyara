@@ -964,14 +964,15 @@ function voyaraOpenDayRoute(dayNumber) {
     if (stops.length >= 5) break;
   }
   const destination = String(currentProfile.destination||"").trim();
-  if (!stops.length) {
-    const query = [destination, "Day " + dayNumber, section.replace(/[#*\\n]/g," ").slice(0,160)].filter(Boolean).join(" ");
+  if (stops.length < 2) {
+    const query = [stops[0], destination, "Day " + dayNumber].filter(Boolean).join(" ");
     window.open("https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(query),"_blank","noopener");
     return;
   }
-  const origin = String(currentProfile.startingLocation||stops[0]||destination).trim();
-  const finalStop = stops.length > 1 ? stops[stops.length-1] : stops[0];
-  const waypoints = stops.length > 2 ? stops.slice(1,-1).join("|") : "";
+  const hasStartingLocation=Boolean(String(currentProfile.startingLocation||"").trim());
+  const origin = hasStartingLocation ? String(currentProfile.startingLocation).trim() : stops[0];
+  const finalStop = stops[stops.length-1];
+  const waypoints = (hasStartingLocation ? stops.slice(0,-1) : stops.slice(1,-1)).join("|");
   const params = new URLSearchParams({api:"1",origin,destination:finalStop,travelmode:"driving"});
   if(waypoints) params.set("waypoints",waypoints);
   window.open("https://www.google.com/maps/dir/?"+params.toString(),"_blank","noopener");

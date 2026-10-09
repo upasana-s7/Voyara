@@ -965,7 +965,7 @@ async function regenerateSingleDay(dayNumber, button) {
 
     currentItinerary = currentItinerary.replace(
       dayPattern,
-      (matched, prefix) => prefix + "\\n" + result.day.trim()
+      (matched, prefix) => prefix + "\n" + result.day.trim()
     );
     displayItinerary(currentItinerary);
     voyaraToast(`Day ${dayNumber} regenerated.`);
@@ -2581,12 +2581,38 @@ function voyaraForYouCard(item) {
   return `<article class="voyara-place-card"><div class="voyara-place-card-body"><span class="voyara-place-type">${escapeHtml(item.type||item.category)}</span><h4>${escapeHtml(item.name)}</h4>${rating}<div class="voyara-place-overview"><strong>About this place</strong><p>${escapeHtml(overview)}</p></div>${reviewMarkup}<p class="voyara-place-address">${escapeHtml(item.address||item.destination||"")}</p><div class="voyara-place-actions"><a href="${escapeHtml(item.mapUrl||`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.name+', '+item.destination)}`)}" target="_blank" rel="noopener noreferrer">Google Maps ↗</a><button type="button" data-save-final-place="${escapeHtml(item.id)}">${isSaved?'✓ Saved':'♡ Wishlist'}</button><button type="button" data-add-final-place="${escapeHtml(item.id)}">Add to itinerary</button></div></div></article>`;
 }
 
+function voyaraPriceLevelNumber(value) {
+  const key = String(value || "").toUpperCase();
+  if (key === "PRICE_LEVEL_FREE") return 0;
+  if (key === "PRICE_LEVEL_INEXPENSIVE") return 1;
+  if (key === "PRICE_LEVEL_MODERATE") return 2;
+  if (key === "PRICE_LEVEL_EXPENSIVE") return 3;
+  if (key === "PRICE_LEVEL_VERY_EXPENSIVE") return 4;
+  return null;
+}
+
+function voyaraApplyForYouFilters(items) {
+  const minRating = Number($("forYouMinRating")?.value || 0);
+  const maxPrice = $("forYouBudgetFilter")?.value || "";
+  const openNowOnly = Boolean($("forYouOpenNow")?.checked);
+  return items.filter(item => {
+    if (minRating > 0 && (item.rating === null || item.rating === undefined || Number(item.rating) < minRating)) return false;
+    if (maxPrice !== "") {
+      const price = voyaraPriceLevelNumber(item.priceLevel);
+      if (price === null || price > Number(maxPrice)) return false;
+    }
+    if (openNowOnly && item.openNow !== true) return false;
+    return true;
+  });
+}
+
 function renderForYouResults() {
   const grid=$("recommendationGrid"); if(!grid)return;
   const category=$("forYouCategory")?.value||"all";
   if(!voyaraForYouResults.length){grid.innerHTML=`<div class="for-you-empty"><strong>Search a destination to discover places.</strong><span>Choose one of the five categories or view all five categories together.</span></div>`;return;}
-  const groups=category==="all" ? VOYARA_FOR_YOU_CATEGORIES.map(cat=>({cat,items:voyaraForYouResults.filter(x=>x.category===cat).slice(0,6)})).filter(g=>g.items.length) : [{cat:category,items:voyaraForYouResults.filter(x=>x.category===category).slice(0,6)}];
-  if(!groups.some(g=>g.items.length)){grid.innerHTML=`<div class="for-you-empty"><strong>No matching places were found for this category.</strong><span>Try another category or a more specific destination.</span></div>`;return;}
+  const filteredResults=voyaraApplyForYouFilters(voyaraForYouResults);
+  const groups=category==="all" ? VOYARA_FOR_YOU_CATEGORIES.map(cat=>({cat,items:filteredResults.filter(x=>x.category===cat).slice(0,6)})).filter(g=>g.items.length) : [{cat:category,items:filteredResults.filter(x=>x.category===cat).slice(0,6)}];
+  if(!groups.some(g=>g.items.length)){grid.innerHTML=`<div class="for-you-empty"><strong>No places match these filters.</strong><span>Try lowering the minimum rating, increasing the budget level, or turning off “Open now”. Filters only use live fields supplied by the place source.</span></div>`;return;}
   grid.innerHTML=groups.map(g=>`<section class="voyara-category-results"><div class="voyara-category-results-heading"><div><span class="eyebrow">${escapeHtml(g.cat)}</span><h3>${g.cat}</h3></div><span>${g.items.length} recommendations</span></div><div class="voyara-category-results-grid">${g.items.map(voyaraForYouCard).join("")}</div></section>`).join("");
   grid.querySelectorAll("[data-save-final-place]").forEach(btn=>btn.addEventListener("click",()=>{const item=voyaraForYouResults.find(x=>String(x.id)===String(btn.dataset.saveFinalPlace));if(!item)return;let saved=voyaraGetJSON(VOYARA_SAVED_PLACES_KEY,[]);const idx=saved.findIndex(x=>String(x.id)===String(item.id));if(idx>=0){saved.splice(idx,1);btn.textContent="♡ Wishlist";}else{saved.push({...item,savedAt:new Date().toISOString()});btn.textContent="✓ Saved";}voyaraSetJSON(VOYARA_SAVED_PLACES_KEY,saved);updateHomeStats();}));
   grid.querySelectorAll("[data-add-final-place]").forEach(btn=>btn.addEventListener("click",()=>{const item=voyaraForYouResults.find(x=>String(x.id)===String(btn.dataset.addFinalPlace));if(!item)return;window.voyaraPlanDestination(item.destination);const pref=$("preferences");if(pref)pref.value=`${pref.value?pref.value+"; ":""}Include ${item.name}`;voyaraToast(`${item.name} added to your trip preferences.`);}));
@@ -2651,6 +2677,7 @@ function bindRecommendationsFinal() {
   button.addEventListener("click",run);
   input.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();run();}});
   select.addEventListener("change",()=>{if(input.value.trim())run();});
+  ["forYouMinRating","forYouBudgetFilter","forYouOpenNow"].forEach(id=>$(id)?.addEventListener("change",renderForYouResults));
   renderForYouResults();
 }
 

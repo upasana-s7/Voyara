@@ -1149,13 +1149,13 @@ def _osm_places_search(
     for tag in tags:
         for element in ("node", "way", "relation"):
             clauses.append(
-                f"{element}(around:12000,{lat},{lon})[{tag}];"
+                f"{element}(around:50000,{lat},{lon})[{tag}];"
             )
 
     overpass_query = (
         "[out:json][timeout:8];("
         + "".join(clauses)
-        + ");out center tags 12;"
+        + ");out center tags 200;"
     )
 
     try:

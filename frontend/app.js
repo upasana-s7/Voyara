@@ -3040,7 +3040,6 @@ function voyaraEnsureTripToolkit(){
   else if(itinerary) itinerary.insertAdjacentElement("afterend",mount);
   else if(planner) planner.appendChild(mount);
 
-  const currentKey=voyaraBudgetStorageKey();
   let saved={};
   try{
     const currentSaved=localStorage.getItem(currentKey);

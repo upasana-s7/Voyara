@@ -949,42 +949,6 @@
                     <button type="button" class="primary-button" id="forYouSearchBtn">Find places</button>
                 </div>
 
-                <div class="voyara-for-you-filters" aria-label="Filter place recommendations">
-                    <label>
-                        <span>Minimum rating</span>
-                        <select id="forYouMinRating">
-                            <option value="0">Any rating</option>
-                            <option value="3">3+ stars</option>
-                            <option value="4">4+ stars</option>
-                            <option value="4.5">4.5+ stars</option>
-                        </select>
-                    </label>
-                    <label>
-                        <span>Budget (Google price level)</span>
-                        <select id="forYouBudgetFilter">
-                            <option value="">Any budget</option>
-                            <option value="1">Free / inexpensive</option>
-                            <option value="2">Up to moderate</option>
-                            <option value="3">Up to expensive</option>
-                            <option value="4">Any listed price level</option>
-                        </select>
-                    </label>
-                    <label>
-                        <span>Distance from destination centre</span>
-                        <select id="forYouDistanceFilter">
-                            <option value="">Any distance</option>
-                            <option value="5">Within 5 km</option>
-                            <option value="10">Within 10 km</option>
-                            <option value="25">Within 25 km</option>
-                            <option value="50">Within 50 km</option>
-                        </select>
-                    </label>
-                    <label class="voyara-open-now-filter">
-                        <input id="forYouOpenNow" type="checkbox">
-                        <span>Open now (when available)</span>
-                    </label>
-                </div>
-                <p class="voyara-source-note">Filters only work when the selected place source supplies that data. Distance is approximate straight-line distance from the destination centre, not road distance. Missing ratings, price levels or opening status are never guessed.</p>
                 <p class="voyara-source-note for-you-source-note" id="forYouSourceNote"></p>
                 <div class="recommendation-grid" id="recommendationGrid"></div>
             </section>

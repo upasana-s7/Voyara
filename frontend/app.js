@@ -327,32 +327,6 @@ function bindWelcomeScreen() {
     });
   }
 
-  const quickNameButton = $("googleSignInBtn");
-  if (quickNameButton && !quickNameButton.dataset.quickNameBound) {
-    quickNameButton.dataset.quickNameBound = "true";
-    quickNameButton.addEventListener("click", () => {
-      const name = $("nameInput")?.value.trim() || "";
-      if (!name) {
-        voyaraAccountMessage("Type your name above, then choose Continue with your name.");
-        $("nameInput")?.focus();
-        return;
-      }
-      // Local guest access only; this is not Google OAuth.
-      const identifier = "guest:" + name.toLocaleLowerCase();
-      localStorage.setItem("voyaraUserName", name);
-      localStorage.setItem("voyaraUserIdentifier", identifier);
-      localStorage.setItem("voyaraGuestSession", "true");
-      hideElement($("welcomeScreen"));
-      showElement($("app"));
-      setText("profileName", name);
-      setText("profileInitial", name.charAt(0).toUpperCase());
-      setText("userGreeting", name);
-      setText("homeUserName", name);
-      showSection("home");
-      try { updateHomeStats(); } catch (_) {}
-    });
-  }
-
   const tabs = document.querySelectorAll(".voyara-auth-tab");
   tabs.forEach((tab) => {
     tab.addEventListener("click", () => {
@@ -385,30 +359,29 @@ function bindWelcomeScreen() {
   });
 
   const googleSignInButton = $("googleSignInBtn");
-
-  if (googleSignInButton && !googleSignInButton.dataset.authBound) {
-    googleSignInButton.dataset.authBound = "true";
-    googleSignInButton.addEventListener("click", () => {
-      const name = prompt("Enter your name to continue with Voyara:");
-      if (!name || !name.trim()) return;
-
-      const identifier = "google:" + name.trim().toLowerCase();
+  if (googleSignInButton && !googleSignInButton.dataset.nameSignInBound) {
+    googleSignInButton.dataset.nameSignInBound = "true";
+    googleSignInButton.addEventListener("click", (event) => {
+      event.preventDefault();
+      const nameInput = $("nameInput");
+      const name = nameInput?.value.trim() || "";
+      if (!name) {
+        voyaraAccountMessage("Please type your name above first.");
+        nameInput?.focus();
+        return;
+      }
+      const identifier = "guest:" + name.toLocaleLowerCase();
+      localStorage.setItem("voyaraUserName", name);
+      localStorage.setItem("voyaraUserIdentifier", identifier);
+      localStorage.setItem("voyaraGuestSession", "true");
       const accounts = voyaraGetAccounts();
-
       if (!accounts[identifier]) {
         accounts[identifier] = {
-          name: name.trim(),
-          email: "",
-          phone: "",
-          password: "",
-          provider: "google",
-          createdAt: new Date().toISOString()
+          name, email: "", phone: "", password: "",
+          provider: "name-only", createdAt: new Date().toISOString()
         };
         voyaraSaveAccounts(accounts);
       }
-
-      localStorage.setItem("voyaraUserName", name.trim());
-      localStorage.setItem("voyaraUserIdentifier", identifier);
       showApplication();
     });
   }

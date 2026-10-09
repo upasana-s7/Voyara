@@ -2507,8 +2507,16 @@ function bindExploreFinal() {
 function voyaraForYouCard(item) {
   const saved=voyaraGetJSON(VOYARA_SAVED_PLACES_KEY,[]);
   const isSaved=saved.some(p=>String(p.id)===String(item.id));
-  const rating=item.rating!==null&&item.rating!==undefined ? `<div class="voyara-place-rating">★ ${Number(item.rating).toFixed(1)}${item.ratingCount?` <small>(${Number(item.ratingCount).toLocaleString()} reviews)</small>`:""}</div>` : "";
-  return `<article class="voyara-place-card"><div class="voyara-place-card-body"><span class="voyara-place-type">${escapeHtml(item.type||item.category)}</span><h4>${escapeHtml(item.name)}</h4>${rating}<p>${escapeHtml(item.address||item.destination||"")}</p><div class="voyara-place-actions"><a href="${escapeHtml(item.mapUrl||`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.name+', '+item.destination)}`)}" target="_blank" rel="noopener noreferrer">Google Maps ↗</a><button type="button" data-save-final-place="${escapeHtml(item.id)}">${isSaved?'✓ Saved':'♡ Wishlist'}</button><button type="button" data-add-final-place="${escapeHtml(item.id)}">Add to itinerary</button></div></div></article>`;
+  const rating=item.rating!==null&&item.rating!==undefined
+    ? `<div class="voyara-place-rating" aria-label="Google rating ${Number(item.rating).toFixed(1)} out of 5">★ ${Number(item.rating).toFixed(1)}${item.ratingCount?` <small>(${Number(item.ratingCount).toLocaleString()} ratings)</small>`:""}<small>Google rating</small></div>`
+    : `<div class="voyara-place-rating unavailable">Rating unavailable from this source</div>`;
+  const overview=String(item.description||"").trim() ||
+    `Explore this ${String(item.type||item.category||"place").toLowerCase()} in ${item.destination||"your destination"}. Open the map listing for current visitor photos, directions and opening details.`;
+  const reviews=Array.isArray(item.reviews)?item.reviews.filter(r=>r&&String(r.text||"").trim()).slice(0,2):[];
+  const reviewMarkup=reviews.length
+    ? `<div class="voyara-place-review"><div class="voyara-place-review-title">Visitor review${reviews.length>1?"s":""} <span>from Google Maps</span></div>${reviews.map(review=>`<blockquote><p>“${escapeHtml(review.text)}”</p><footer>${review.rating!==null&&review.rating!==undefined?`★ ${Number(review.rating).toFixed(1)} · `:""}${escapeHtml(review.author||"Google Maps user")}${review.relativeTime?` · ${escapeHtml(review.relativeTime)}`:""}</footer></blockquote>`).join("")}</div>`
+    : "";
+  return `<article class="voyara-place-card"><div class="voyara-place-card-body"><span class="voyara-place-type">${escapeHtml(item.type||item.category)}</span><h4>${escapeHtml(item.name)}</h4>${rating}<div class="voyara-place-overview"><strong>About this place</strong><p>${escapeHtml(overview)}</p></div>${reviewMarkup}<p class="voyara-place-address">${escapeHtml(item.address||item.destination||"")}</p><div class="voyara-place-actions"><a href="${escapeHtml(item.mapUrl||`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.name+', '+item.destination)}`)}" target="_blank" rel="noopener noreferrer">Google Maps ↗</a><button type="button" data-save-final-place="${escapeHtml(item.id)}">${isSaved?'✓ Saved':'♡ Wishlist'}</button><button type="button" data-add-final-place="${escapeHtml(item.id)}">Add to itinerary</button></div></div></article>`;
 }
 
 function renderForYouResults() {

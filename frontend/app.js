@@ -2722,10 +2722,14 @@ async function searchForYouPlaces() {
     }
 
     if(!results.length && /^(goa|kerala)$/i.test(destination)){
-      voyaraForYouResults=[];
-      if(note)note.textContent="No live places were returned by the place search for this destination and category. Try another category or destination; ratings are displayed whenever the source supplies them.";
+      const destinationSamples=VOYARA_FOR_YOU_SAMPLE_RESULTS.filter(item=>item.destination.toLowerCase()===destination.toLowerCase());
+      voyaraForYouResults=category==="all" ? destinationSamples : destinationSamples.filter(item=>item.category===category);
+      if(note)note.textContent=voyaraForYouResults.length
+        ? "Showing destination-specific suggestions while live place search is unavailable. Open Google Maps on each card for the current rating and reviews."
+        : "No suggestions are available for this category yet. Try another category or destination.";
     }else{
       voyaraForYouResults=results;
+      if(!results.length && note)note.textContent="No places were returned by live search. Check the backend service and place-data provider, then try again.";
     }
     if(note && results.length) note.textContent=sources.has("Google Places")?"Recommendations are from Google Places. Ratings are shown only when Google supplies them.":"Recommendations are from OpenStreetMap. Ratings are shown only when a real rating is supplied by the source.";
     renderForYouResults();

@@ -355,36 +355,40 @@ function bindWelcomeScreen() {
     });
   });
 
-  const googleSignInButton = $("googleSignInBtn");
-  if (googleSignInButton) {
-    // Assign directly instead of stacking listeners across repeated initialization.
-    googleSignInButton.onclick = function (event) {
+  const continueWithName = function (event) {
+    if (event) {
       event.preventDefault();
       event.stopPropagation();
+    }
 
-      const nameInput = $("nameInput");
-      const name = String(nameInput?.value || "").trim().replace(/\\s+/g, " ");
-      if (!name) {
-        voyaraAccountMessage("Type your name in the Your name field first.");
-        nameInput?.focus();
-        return;
-      }
+    const nameInput = $("nameInput");
+    const name = String(nameInput?.value || "").trim().replace(/\s+/g, " ");
+    if (!name) {
+      voyaraAccountMessage("Type your name in the Your name field first.");
+      nameInput?.focus();
+      return;
+    }
 
-      try {
-        const identifier = "guest:" + name.toLocaleLowerCase();
-        localStorage.setItem("voyaraUserName", name);
-        localStorage.setItem("voyaraUserIdentifier", identifier);
-        localStorage.setItem("voyaraGuestSession", "true");
-        // Use the app's shared transition helper so the welcome screen,
-        // app screen, profile labels, and home section stay in sync.
-        showApplication();
-        const message = $("voyaraAuthMessage");
-        if (message) message.classList.add("hidden");
-      } catch (error) {
-        console.error("Voyara continue-with-name failed:", error);
-        voyaraAccountMessage("Sign-in could not save this session. Enable site storage and try again.");
-      }
-    };
+    try {
+      // This is a local guest session, not Google OAuth authentication.
+      localStorage.setItem("voyaraUserName", name);
+      localStorage.setItem("voyaraUserIdentifier", "guest:" + name.toLowerCase());
+      localStorage.setItem("voyaraGuestSession", "true");
+      const message = $("voyaraAuthMessage");
+      if (message) message.classList.add("hidden");
+      showApplication();
+      if (typeof showSection === "function") showSection("home");
+      if (typeof updateHomeStats === "function") updateHomeStats();
+    } catch (error) {
+      console.error("Voyara continue-with-name failed:", error);
+      voyaraAccountMessage("Could not save your session. Please enable site storage and try again.");
+    }
+  };
+
+  const googleSignInButton = $("googleSignInBtn");
+  if (googleSignInButton) {
+    googleSignInButton.type = "button";
+    googleSignInButton.onclick = continueWithName;
   }
 }
 

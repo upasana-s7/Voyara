@@ -364,24 +364,21 @@ function bindWelcomeScreen() {
     googleSignInButton.addEventListener("click", (event) => {
       event.preventDefault();
       const nameInput = $("nameInput");
-      const name = nameInput?.value.trim() || "";
+      const name = (nameInput?.value || "").trim();
       if (!name) {
-        voyaraAccountMessage("Please type your name above first.");
-        nameInput?.focus();
+        voyaraAccountMessage("Please type your name in the Your name field first.");
+        if (nameInput) { nameInput.classList.remove("hidden"); nameInput.focus(); }
         return;
       }
+      // Name-only quick access; this is not Google account authentication.
       const identifier = "guest:" + name.toLocaleLowerCase();
       localStorage.setItem("voyaraUserName", name);
       localStorage.setItem("voyaraUserIdentifier", identifier);
       localStorage.setItem("voyaraGuestSession", "true");
       const accounts = voyaraGetAccounts();
-      if (!accounts[identifier]) {
-        accounts[identifier] = {
-          name, email: "", phone: "", password: "",
-          provider: "name-only", createdAt: new Date().toISOString()
-        };
-        voyaraSaveAccounts(accounts);
-      }
+      accounts[identifier] = { ...(accounts[identifier] || {}), name, email: "", phone: "", password: "", provider: "name-only", createdAt: accounts[identifier]?.createdAt || new Date().toISOString() };
+      voyaraSaveAccounts(accounts);
+      voyaraAccountMessage("");
       showApplication();
     });
   }

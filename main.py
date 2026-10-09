@@ -900,6 +900,8 @@ def _google_places_search(
         "places.formattedAddress,"
         "places.rating,"
         "places.userRatingCount,"
+        "places.priceLevel,"
+        "places.currentOpeningHours.openNow,"
         "places.googleMapsUri,"
         "places.primaryTypeDisplayName,"
         "places.location,"
@@ -986,6 +988,8 @@ def _google_places_search(
             "ratingCount": place.get(
                 "userRatingCount"
             ),
+            "priceLevel": place.get("priceLevel"),
+            "openNow": (place.get("currentOpeningHours") or {}).get("openNow"),
             "reviews": [
                 {
                     "rating": review.get("rating"),

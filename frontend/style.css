@@ -3097,3 +3097,28 @@ body[data-theme="dark"] .welcome-screen{background:radial-gradient(ellipse at 12
 .voyara-place-review blockquote p{font-size:13px;line-height:1.55;margin:0 0 6px}
 .voyara-place-review blockquote footer,.voyara-place-address{font-size:11px;line-height:1.45;color:#777}
 .voyara-place-rating{flex-wrap:wrap}
+
+
+/* Voyara upgrades: source-aware filters, per-day regeneration and itemized expenses */
+.voyara-for-you-filters{display:flex;align-items:end;gap:14px;flex-wrap:wrap;margin:14px 0 8px;padding:16px;border:1px solid var(--border);border-radius:16px;background:var(--white)}
+.voyara-for-you-filters label{display:flex;flex-direction:column;gap:6px;min-width:170px;flex:1;font-size:12px;font-weight:700}
+.voyara-for-you-filters select{width:100%;min-height:42px;border:1px solid var(--border);border-radius:10px;padding:9px 11px;background:var(--white);color:var(--text)}
+.voyara-for-you-filters .voyara-open-now-filter{flex-direction:row;align-items:center;min-width:180px;flex:0 1 auto}
+.voyara-for-you-filters .voyara-open-now-filter input{width:17px;height:17px}
+.voyara-regenerate-day-btn{display:inline-flex;align-items:center;gap:5px;margin-left:10px;padding:6px 10px;border:1px solid #cbd8cb;border-radius:999px;background:#f5f8f3;color:#365b48;font:600 11px/1.2 "DM Sans",sans-serif;cursor:pointer;vertical-align:middle}
+.voyara-regenerate-day-btn:disabled{opacity:.55;cursor:wait}
+.voyara-expense-form{display:grid;grid-template-columns:minmax(120px,2fr) minmax(100px,1fr) minmax(90px,1fr) 80px auto;gap:8px;margin-top:14px}
+.voyara-expense-form input,.voyara-expense-form select{min-width:0;width:100%;border:1px solid var(--border);border-radius:10px;padding:10px;background:var(--white);color:var(--text)}
+.voyara-expense-form .primary-button{white-space:nowrap;padding:10px 12px}
+.voyara-expense-summary{margin-top:14px;padding:12px;border-radius:12px;background:#f7f3ed;font-size:12px}
+.voyara-daily-budget-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:8px;margin-top:10px}
+.voyara-daily-budget-grid>div{padding:9px;border-radius:9px;background:rgba(255,255,255,.75)}
+.voyara-daily-budget-grid span,.voyara-daily-budget-grid small{display:block;font-size:11px;opacity:.7}
+.voyara-daily-budget-grid strong{display:block;margin:3px 0;font-size:14px}
+.voyara-expense-list{display:grid;gap:7px;margin-top:10px}
+.voyara-expense-item{display:flex;align-items:center;gap:12px;padding:10px 11px;border:1px solid var(--border);border-radius:11px}
+.voyara-expense-item>div{flex:1;min-width:0}
+.voyara-expense-item>div strong,.voyara-expense-item small{display:block;overflow-wrap:anywhere}
+.voyara-expense-item small{margin-top:3px;font-size:11px;opacity:.65}
+.voyara-expense-item>button{border:0;border-radius:8px;padding:4px 9px;background:#f8ece8;color:#8b392b;cursor:pointer;font-size:18px}
+@media(max-width:700px){.voyara-expense-form{grid-template-columns:1fr 1fr}.voyara-expense-form input:first-child{grid-column:1/-1}.voyara-expense-form .primary-button{grid-column:1/-1}.voyara-regenerate-day-btn{margin:7px 0 0;display:flex;width:max-content}.voyara-for-you-filters label{min-width:100%;}}

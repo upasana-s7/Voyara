@@ -901,7 +901,8 @@ def _distance_km(lat1, lon1, lat2, lon2):
 def _google_places_search(
     destination,
     category,
-    query_text
+    query_text,
+    center=None
 ):
     category_text = PLACE_CATEGORY_QUERY.get(
         category,
@@ -972,13 +973,15 @@ def _google_places_search(
 
     results = []
     center_lat = center_lon = None
-    try:
-        center = _geocode_destination(destination)
+    if center is None:
+        try:
+            center = _geocode_destination(destination)
+        except Exception as error:
+            # Distance is optional; never fail place search because geocoding failed.
+            print("DESTINATION CENTRE LOOKUP ERROR:", error)
+    if center:
         center_lat = center.get("lat")
         center_lon = center.get("lon")
-    except Exception as error:
-        # Distance is optional; never fail place search because geocoding failed.
-        print("DESTINATION CENTRE LOOKUP ERROR:", error)
 
     for place in data.get("places", []):
         display = place.get(
@@ -1063,7 +1066,8 @@ def _google_places_search(
 def _osm_places_search(
     destination,
     category,
-    query_text
+    query_text,
+    center=None
 ):
     """Reliable POI search using one geocode request and one scoped
     Overpass request, with Nominatim as a lightweight fallback.
@@ -1112,10 +1116,11 @@ def _osm_places_search(
         )
 
     try:
-        places = geocode()
-        if not places:
-            return []
-        center = places[0]
+        if center is None:
+            places = geocode()
+            if not places:
+                return []
+            center = places[0]
         lat = float(center["lat"])
         lon = float(center["lon"])
     except Exception as error:
@@ -1342,29 +1347,58 @@ def discover_places():
         }), 400
 
     try:
-        if GOOGLE_MAPS_API_KEY:
+        if category == "all":
+            categories = [
+                name for name in PLACE_CATEGORY_QUERY
+                if name != "all"
+            ]
+            try:
+                center = _geocode_destination(destination)
+            except Exception as error:
+                print("DESTINATION CENTRE LOOKUP ERROR:", error)
+                center = None
+
+            if center is None:
+                # Keep the all-category fallback available if geocoding fails.
+                search = _google_places_search if GOOGLE_MAPS_API_KEY else _osm_places_search
+                results = search(destination, "all", query_text)
+            else:
+                results = []
+                for place_category in categories:
+                    if GOOGLE_MAPS_API_KEY:
+                        found = _google_places_search(
+                            destination, place_category, query_text, center=center
+                        )
+                    else:
+                        found = _osm_places_search(
+                            destination, place_category, query_text, center=center
+                        )
+                    for place in found:
+                        if not any(
+                            str(existing.get("id")) == str(place.get("id"))
+                            for existing in results
+                        ):
+                            results.append(place)
+            source = "Google Places" if GOOGLE_MAPS_API_KEY else "OpenStreetMap"
+            result_limit = 30
+        elif GOOGLE_MAPS_API_KEY:
             results = _google_places_search(
-                destination,
-                category,
-                query_text
+                destination, category, query_text
             )
             source = "Google Places"
-
+            result_limit = 6
         else:
             results = _osm_places_search(
-                destination,
-                category,
-                query_text
+                destination, category, query_text
             )
             source = "OpenStreetMap"
+            result_limit = 6
 
         return jsonify({
             "success": True,
             "source": source,
-            "google_places_configured":
-                bool(GOOGLE_MAPS_API_KEY),
-            "results":
-                results[:6],
+            "google_places_configured": bool(GOOGLE_MAPS_API_KEY),
+            "results": results[:result_limit],
         })
 
     except urllib.error.HTTPError as error:

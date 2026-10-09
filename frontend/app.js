@@ -2676,6 +2676,8 @@ async function searchForYouPlaces() {
   const grid=$("recommendationGrid");
   const note=$("forYouSourceNote");
   if(!destination){
+    if($("forYouSearchBtn"))$("forYouSearchBtn").disabled=false;
+    if($("forYouCategory"))$("forYouCategory").disabled=false;
     voyaraForYouResults=VOYARA_FOR_YOU_SAMPLE_RESULTS.slice();
     if(note)note.textContent="Demo recommendations for Goa and Kerala are available below.";
     renderForYouResults();

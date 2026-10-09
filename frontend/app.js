@@ -2501,6 +2501,26 @@ const VOYARA_FOR_YOU_SAMPLE_RESULTS = [
   {id:"sample-kerala-kathakali-centre",name:"Kerala Kathakali Centre",destination:"Kerala",category:"Experiences & Activities",description:"Cultural venue in Kochi for experiencing Kerala's traditional Kathakali performance art.",rating:null},
   {id:"sample-kerala-periyar-boating",name:"Periyar Lake Boating",destination:"Kerala",category:"Experiences & Activities",description:"Scenic boating experience through the forested Periyar lake region.",rating:null},
   {id:"sample-kerala-kumbalangi",name:"Kumbalangi Village",destination:"Kerala",category:"Experiences & Activities",description:"Village experience highlighting Kerala's backwaters, fishing culture and rural landscapes.",rating:null}
+  {id:"sample-goa-morjim-beach",name:"Morjim Beach",destination:"Goa",category:"Nature & Outdoors",description:"A wide North Goa beach known for its quieter shoreline.",rating:null},
+  {id:"sample-goa-salim-ali-bird-sanctuary",name:"Salim Ali Bird Sanctuary",destination:"Goa",category:"Nature & Outdoors",description:"A mangrove sanctuary popular for birdwatching.",rating:null},
+  {id:"sample-goa-reis-magos-fort",name:"Reis Magos Fort",destination:"Goa",category:"Attractions & Culture",description:"A restored riverside fort with heritage exhibits.",rating:null},
+  {id:"sample-goa-museum-of-goa",name:"Museum of Goa",destination:"Goa",category:"Attractions & Culture",description:"A contemporary art museum exploring Goan culture.",rating:null},
+  {id:"sample-goa-mum-s-kitchen",name:"Mum’s Kitchen",destination:"Goa",category:"Food & Cafés",description:"A Panaji restaurant serving regional Goan dishes.",rating:null},
+  {id:"sample-goa-fisherman-s-wharf",name:"Fisherman’s Wharf",destination:"Goa",category:"Food & Cafés",description:"A riverside restaurant known for coastal cuisine.",rating:null},
+  {id:"sample-goa-caculo-mall",name:"Caculo Mall",destination:"Goa",category:"Shopping & Local Markets",description:"A shopping centre in Panaji with a range of stores.",rating:null},
+  {id:"sample-goa-navelim-market",name:"Navelim Market",destination:"Goa",category:"Shopping & Local Markets",description:"A local market area for everyday shopping.",rating:null},
+  {id:"sample-goa-fontainhas-heritage-walk",name:"Fontainhas Heritage Walk",destination:"Goa",category:"Experiences & Activities",description:"A walk through colourful Portuguese-era streets.",rating:null},
+  {id:"sample-goa-mandovi-river-kayaking",name:"Mandovi River Kayaking",destination:"Goa",category:"Experiences & Activities",description:"A guided paddling experience around the river waterways.",rating:null},
+  {id:"sample-kerala-chembra-peak",name:"Chembra Peak",destination:"Kerala",category:"Nature & Outdoors",description:"A well-known Wayanad trek with lush hill scenery.",rating:null},
+  {id:"sample-kerala-silent-valley-national-park",name:"Silent Valley National Park",destination:"Kerala",category:"Nature & Outdoors",description:"A protected rainforest known for its biodiversity.",rating:null},
+  {id:"sample-kerala-paradesi-synagogue",name:"Paradesi Synagogue",destination:"Kerala",category:"Attractions & Culture",description:"A historic synagogue in Kochi’s Mattancherry district.",rating:null},
+  {id:"sample-kerala-vadakkunnathan-temple",name:"Vadakkunnathan Temple",destination:"Kerala",category:"Attractions & Culture",description:"A historic temple complex in the heart of Thrissur.",rating:null},
+  {id:"sample-kerala-salkara-restaurant",name:"Salkara Restaurant",destination:"Kerala",category:"Food & Cafés",description:"A restaurant associated with Malabar-style food.",rating:null},
+  {id:"sample-kerala-rahmathullah-hotel",name:"Rahmathullah Hotel",destination:"Kerala",category:"Food & Cafés",description:"A Kozhikode restaurant known for Malabar biryani.",rating:null},
+  {id:"sample-kerala-sm-street",name:"SM Street",destination:"Kerala",category:"Shopping & Local Markets",description:"A lively Kozhikode shopping street with local stores.",rating:null},
+  {id:"sample-kerala-convent-junction-market",name:"Convent Junction Market",destination:"Kerala",category:"Shopping & Local Markets",description:"A central Kochi area with shops and daily essentials.",rating:null},
+  {id:"sample-kerala-kalaripayattu-performance",name:"Kalaripayattu Performance",destination:"Kerala",category:"Experiences & Activities",description:"A cultural demonstration of Kerala’s traditional martial art.",rating:null},
+  {id:"sample-kerala-kochi-water-metro-ride",name:"Kochi Water Metro Ride",destination:"Kerala",category:"Experiences & Activities",description:"A public ferry ride with views of the Kochi waterfront.",rating:null},
 ];
 
 function voyaraExploreCard(destination, searched=false) {
@@ -2617,19 +2637,15 @@ function bindExploreFinal() {
 }
 
 function voyaraForYouCard(item) {
-  const saved=voyaraGetJSON(VOYARA_SAVED_PLACES_KEY,[]);
-  const isSaved=saved.some(p=>String(p.id)===String(item.id));
-  const rating=item.rating!==null&&item.rating!==undefined
-    ? `<div class="voyara-place-rating" aria-label="Google rating ${Number(item.rating).toFixed(1)} out of 5">★ ${Number(item.rating).toFixed(1)}${item.ratingCount?` <small>(${Number(item.ratingCount).toLocaleString()} ratings)</small>`:""}<small>Google rating</small></div>`
-    : `<div class="voyara-place-rating unavailable">Rating unavailable from this source</div>`;
-  const distanceLabel=item.distanceKm!==null&&item.distanceKm!==undefined&&Number.isFinite(Number(item.distanceKm))?`<small class="voyara-place-distance">Approx. ${Number(item.distanceKm).toFixed(1)} km from destination centre (straight-line)</small>`:"";
-  const overview=String(item.description||"").trim() ||
-    `Explore this ${String(item.type||item.category||"place").toLowerCase()} in ${item.destination||"your destination"}. Open the map listing for current visitor photos, directions and opening details.`;
-  const reviews=Array.isArray(item.reviews)?item.reviews.filter(r=>r&&String(r.text||"").trim()).slice(0,2):[];
-  const reviewMarkup=reviews.length
-    ? `<div class="voyara-place-review"><div class="voyara-place-review-title">Visitor review${reviews.length>1?"s":""} <span>from Google Maps</span></div>${reviews.map(review=>`<blockquote><p>“${escapeHtml(review.text)}”</p><footer>${review.rating!==null&&review.rating!==undefined?`★ ${Number(review.rating).toFixed(1)} · `:""}${escapeHtml(review.author||"Google Maps user")}${review.relativeTime?` · ${escapeHtml(review.relativeTime)}`:""}</footer></blockquote>`).join("")}</div>`
-    : "";
-  return `<article class="voyara-place-card"><div class="voyara-place-card-body"><span class="voyara-place-type">${escapeHtml(item.type||item.category)}</span><h4>${escapeHtml(item.name)}</h4>${rating}${distanceLabel}<div class="voyara-place-overview"><strong>About this place</strong><p>${escapeHtml(overview)}</p></div>${reviewMarkup}<p class="voyara-place-address">${escapeHtml(item.address||item.destination||"")}</p><div class="voyara-place-actions"><a href="${escapeHtml(item.mapUrl||`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.name+', '+item.destination)}`)}" target="_blank" rel="noopener noreferrer">Google Maps ↗</a><button type="button" data-save-final-place="${escapeHtml(item.id)}">${isSaved?'✓ Saved':'♡ Wishlist'}</button><button type="button" data-add-final-place="${escapeHtml(item.id)}">Add to itinerary</button></div></div></article>`;
+  const rating=item.rating!==null&&item.rating!==undefined&&Number.isFinite(Number(item.rating))
+    ? `<div class="voyara-place-rating">★ ${Number(item.rating).toFixed(1)} <small>Google Maps rating${item.ratingCount? ` · ${Number(item.ratingCount).toLocaleString()} ratings`:""}</small></div>`
+    : `<div class="voyara-place-rating unavailable">Google rating unavailable</div>`;
+  const review=Array.isArray(item.reviews)?item.reviews.find(r=>r&&String(r.text||"").trim()):null;
+  const shortReview=review
+    ? `<p class="voyara-place-short-review">“${escapeHtml(review.text)}” <small>— ${escapeHtml(review.author||"Google Maps reviewer")}</small></p>`
+    : `<p class="voyara-place-short-review">${escapeHtml(String(item.description||"Open Google Maps to see current visitor feedback."))}</p>`;
+  const mapUrl=item.mapUrl||`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.name+", "+item.destination)}`;
+  return `<article class="voyara-place-card"><div class="voyara-place-card-body"><span class="voyara-place-type">${escapeHtml(item.category||item.type||"Place")}</span><h4>${escapeHtml(item.name)}</h4>${rating}${shortReview}<p class="voyara-place-actions"><a href="${escapeHtml(mapUrl)}" target="_blank" rel="noopener noreferrer">View on Google Maps ↗</a></p></div></article>`;
 }
 
 function voyaraPriceLevelNumber(value) {
@@ -2721,17 +2737,16 @@ async function searchForYouPlaces() {
       });
     }
 
-    if(!results.length && /^(goa|kerala)$/i.test(destination)){
-      const destinationSamples=VOYARA_FOR_YOU_SAMPLE_RESULTS.filter(item=>item.destination.toLowerCase()===destination.toLowerCase());
-      voyaraForYouResults=category==="all" ? destinationSamples : destinationSamples.filter(item=>item.category===category);
-      if(note)note.textContent=voyaraForYouResults.length
-        ? "Showing destination-specific suggestions while live place search is unavailable. Open Google Maps on each card for the current rating and reviews."
-        : "No suggestions are available for this category yet. Try another category or destination.";
+    if(/^(goa|kerala)$/i.test(destination)){
+      const destinationSamples=VOYARA_FOR_YOU_SAMPLE_RESULTS.filter(item=>item.destination.toLowerCase()===destination.toLowerCase()&&(category==="all"||item.category===category));
+      const merged=[...results];
+      for(const sample of destinationSamples){if(merged.length>=8)break;if(!merged.some(item=>String(item.name).toLowerCase()===sample.name.toLowerCase()))merged.push(sample);}
+      voyaraForYouResults=merged.slice(0,8);
+      if(note)note.textContent="Place suggestions for "+destination+". Google ratings and real visitor reviews appear only when Google Places returns them.";
     }else{
-      voyaraForYouResults=results;
-      if(!results.length && note)note.textContent="No places were returned by live search. Check the backend service and place-data provider, then try again.";
+      voyaraForYouResults=results.slice(0,8);
+      if(!results.length&&note)note.textContent="No places were returned. Try Goa or Kerala, or check the backend service.";
     }
-    if(note && results.length) note.textContent=sources.has("Google Places")?"Recommendations are from Google Places. Ratings are shown only when Google supplies them.":"Recommendations are from OpenStreetMap. Ratings are shown only when a real rating is supplied by the source.";
     renderForYouResults();
   } catch(error) {
     if(requestId!==voyaraForYouRequestId)return;

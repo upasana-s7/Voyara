@@ -2663,9 +2663,9 @@ function renderForYouResults() {
   const grid=$("recommendationGrid"); if(!grid)return;
   const category=$("forYouCategory")?.value||"all";
   if(!voyaraForYouResults.length){grid.innerHTML=`<div class="for-you-empty"><strong>Search a destination to discover places.</strong><span>Choose one of the five categories or view all five categories together.</span></div>`;return;}
-  const filteredResults=voyaraApplyForYouFilters(voyaraForYouResults);
+  const filteredResults=voyaraForYouResults.filter(item => Number(item.rating) > 3.5 && Array.isArray(item.reviews) && item.reviews.filter(review => review && String(review.text || "").trim()).length >= 2);
   const groups=category==="all" ? VOYARA_FOR_YOU_CATEGORIES.map(cat=>({cat,items:filteredResults.filter(x=>x.category===cat).slice(0,6)})).filter(g=>g.items.length) : [{cat:category,items:filteredResults.filter(x=>x.category===cat).slice(0,6)}];
-  if(!groups.some(g=>g.items.length)){grid.innerHTML=`<div class="for-you-empty"><strong>No places match these filters.</strong><span>Try lowering the minimum rating, increasing the budget level, or turning off “Open now”. Filters only use live fields supplied by the place source.</span></div>`;return;}
+  if(!groups.some(g=>g.items.length)){grid.innerHTML=`<div class="for-you-empty"><strong>No places match your requirements yet.</strong><span>Voyara shows places rated above 3.5 only when at least two real visitor reviews are available from Google Places. Try another destination.</span></div>`;return;}
   grid.innerHTML=groups.map(g=>`<section class="voyara-category-results"><div class="voyara-category-results-heading"><div><span class="eyebrow">${escapeHtml(g.cat)}</span><h3>${g.cat}</h3></div><span>${g.items.length} recommendations</span></div><div class="voyara-category-results-grid">${g.items.map(voyaraForYouCard).join("")}</div></section>`).join("");
   grid.querySelectorAll("[data-save-final-place]").forEach(btn=>btn.addEventListener("click",()=>{const item=voyaraForYouResults.find(x=>String(x.id)===String(btn.dataset.saveFinalPlace));if(!item)return;let saved=voyaraGetJSON(VOYARA_SAVED_PLACES_KEY,[]);const idx=saved.findIndex(x=>String(x.id)===String(item.id));if(idx>=0){saved.splice(idx,1);btn.textContent="♡ Wishlist";}else{saved.push({...item,savedAt:new Date().toISOString()});btn.textContent="✓ Saved";}voyaraSetJSON(VOYARA_SAVED_PLACES_KEY,saved);updateHomeStats();}));
   grid.querySelectorAll("[data-add-final-place]").forEach(btn=>btn.addEventListener("click",()=>{const item=voyaraForYouResults.find(x=>String(x.id)===String(btn.dataset.addFinalPlace));if(!item)return;window.voyaraPlanDestination(item.destination);const pref=$("preferences");if(pref)pref.value=`${pref.value?pref.value+"; ":""}Include ${item.name}`;voyaraToast(`${item.name} added to your trip preferences.`);}));
@@ -2722,8 +2722,8 @@ async function searchForYouPlaces() {
     }
 
     if(!results.length && /^(goa|kerala)$/i.test(destination)){
-      voyaraForYouResults=VOYARA_FOR_YOU_SAMPLE_RESULTS.filter(x=>x.destination.toLowerCase()===destination.toLowerCase());
-      if(note)note.textContent="Showing Voyara demo recommendations for this destination.";
+      voyaraForYouResults=[];
+      if(note)note.textContent="Live Google ratings and visitor reviews are required. No matching reviewed places were returned; please try another destination.";
     }else{
       voyaraForYouResults=results;
     }

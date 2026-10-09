@@ -2845,9 +2845,61 @@ function voyaraRenderPacking(){
 
 function voyaraShareTrip(){
   const destination=voyaraToolkitDestination()||"my trip";
-  const text=`I'm planning a trip to ${destination} with Voyara ✈️`;
-  if(navigator.share){navigator.share({title:"My Voyara trip",text,url:location.href}).catch(()=>{});return;}
-  navigator.clipboard?.writeText(text+" "+location.href).then(()=>voyaraToast("Trip share link copied.")).catch(()=>alert(text));
+  const payload={
+    version:1,
+    destination,
+    profile:currentProfile||{},
+    itinerary:currentItinerary||"",
+    budget:$("voyaraBudgetInput")?.value||currentProfile?.budget||"",
+    sharedAt:new Date().toISOString()
+  };
+  if(!payload.itinerary.trim()){
+    voyaraToast("Create or load a trip before sharing its itinerary.");
+    return;
+  }
+  let shareUrl="";
+  try{
+    const encoded=btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+    shareUrl=location.href.split("#")[0]+"#voyara-trip="+encodeURIComponent(encoded);
+  }catch(error){
+    console.error("Trip share encoding failed:",error);
+    alert("This trip could not be prepared for sharing. Please try again.");
+    return;
+  }
+  const text=`My Voyara itinerary for ${destination} ✈️ Open the link to view the trip plan.`;
+  if(navigator.share){
+    navigator.share({title:`Voyara trip: ${destination}`,text,url:shareUrl}).catch(error=>{
+      if(error?.name!=="AbortError")console.warn("Native trip sharing failed:",error);
+    });
+    return;
+  }
+  if(navigator.clipboard?.writeText){
+    navigator.clipboard.writeText(shareUrl).then(()=>voyaraToast("Shareable itinerary link copied.")).catch(()=>window.prompt("Copy this trip link:",shareUrl));
+  }else{
+    window.prompt("Copy this trip link:",shareUrl);
+  }
+}
+
+let voyaraSharedTripLoaded=false;
+function voyaraTryOpenSharedTrip(){
+  if(voyaraSharedTripLoaded)return;
+  const match=String(location.hash||"").match(/^#voyara-trip=(.+)$/);
+  if(!match)return;
+  const app=$("app");
+  if(app?.classList.contains("hidden"))return;
+  try{
+    const payload=JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(match[1])))));
+    if(payload?.version!==1||typeof payload.itinerary!=="string"||!payload.itinerary.trim())throw new Error("Invalid shared itinerary");
+    voyaraSharedTripLoaded=true;
+    currentProfile=payload.profile&&typeof payload.profile==="object"?payload.profile:{destination:payload.destination||"Shared trip",budget:payload.budget||""};
+    currentItinerary=payload.itinerary;
+    displayItinerary(currentItinerary);
+    voyaraEnsureTripToolkit();
+    voyaraToast(`Shared trip opened: ${payload.destination||"your itinerary"}`);
+  }catch(error){
+    console.warn("Could not open shared Voyara trip:",error);
+    voyaraToast("This share link is invalid or incomplete.");
+  }
 }
 
 function voyaraEnsureTripToolkit(){
@@ -2914,5 +2966,16 @@ document.addEventListener("DOMContentLoaded",()=>{
     // Use the final fixed Explore/For You data and controls.
     renderExploreDestinationsFinal($("exploreSearch")?.value||"");
     renderForYouResults();
+    voyaraTryOpenSharedTrip();
+    const appForSharedTrip=$("app");
+    if(appForSharedTrip&&typeof MutationObserver!=="undefined"){
+      const sharedTripObserver=new MutationObserver(()=>{
+        if(!appForSharedTrip.classList.contains("hidden")){
+          voyaraTryOpenSharedTrip();
+          if(voyaraSharedTripLoaded)sharedTripObserver.disconnect();
+        }
+      });
+      sharedTripObserver.observe(appForSharedTrip,{attributes:true,attributeFilter:["class"]});
+    }
   },120);
 });

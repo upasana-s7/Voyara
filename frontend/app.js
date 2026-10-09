@@ -327,6 +327,32 @@ function bindWelcomeScreen() {
     });
   }
 
+  const quickNameButton = $("googleSignInBtn");
+  if (quickNameButton && !quickNameButton.dataset.quickNameBound) {
+    quickNameButton.dataset.quickNameBound = "true";
+    quickNameButton.addEventListener("click", () => {
+      const name = $("nameInput")?.value.trim() || "";
+      if (!name) {
+        voyaraAccountMessage("Type your name above, then choose Continue with your name.");
+        $("nameInput")?.focus();
+        return;
+      }
+      // Local guest access only; this is not Google OAuth.
+      const identifier = "guest:" + name.toLocaleLowerCase();
+      localStorage.setItem("voyaraUserName", name);
+      localStorage.setItem("voyaraUserIdentifier", identifier);
+      localStorage.setItem("voyaraGuestSession", "true");
+      hideElement($("welcomeScreen"));
+      showElement($("app"));
+      setText("profileName", name);
+      setText("profileInitial", name.charAt(0).toUpperCase());
+      setText("userGreeting", name);
+      setText("homeUserName", name);
+      showSection("home");
+      try { updateHomeStats(); } catch (_) {}
+    });
+  }
+
   const tabs = document.querySelectorAll(".voyara-auth-tab");
   tabs.forEach((tab) => {
     tab.addEventListener("click", () => {

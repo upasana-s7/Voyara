@@ -1093,9 +1093,11 @@ def _osm_places_search(
             '"amenity"="marketplace"'
         ],
         "all": [
-            '"tourism"~"attraction|museum|gallery"',
-            '"amenity"~"restaurant|cafe|marketplace"',
-            '"leisure"~"park|garden"'
+            '"tourism"~"attraction|museum|gallery|artwork|zoo|theme_park|viewpoint"',
+            '"amenity"~"restaurant|cafe|fast_food|food_court|bar|marketplace"',
+            '"leisure"~"park|nature_reserve|garden|sports_centre|water_park|stadium"',
+            '"natural"~"waterfall|beach|peak|viewpoint"',
+            '"shop"~"supermarket|mall|department_store|gift|clothes|shoes"'
         ],
     }
 
@@ -1172,6 +1174,7 @@ def _osm_places_search(
 
     results = []
     seen = set()
+    category_counts = {}
 
     for item in elements:
         tags_data = item.get("tags") or {}
@@ -1212,6 +1215,9 @@ def _osm_places_search(
             else:
                 result_category = "Experiences & Activities"
 
+        if category == "all" and category_counts.get(result_category, 0) >= 6:
+            continue
+
         address_parts = [
             tags_data.get("addr:street"),
             tags_data.get("addr:city"),
@@ -1242,11 +1248,15 @@ def _osm_places_search(
             "source": "OpenStreetMap",
         })
 
-        if len(results) >= 6:
+        category_counts[result_category] = category_counts.get(result_category, 0) + 1
+        if category == "all":
+            if sum(category_counts.values()) >= 30:
+                break
+        elif len(results) >= 6:
             break
 
     if results:
-        return results[:6]
+        return results[:30] if category == "all" else results[:6]
 
     # Last-resort Nominatim fallback. This is intentionally only one
     # request so a temporary Overpass issue cannot make the UI hang.
@@ -1362,23 +1372,24 @@ def discover_places():
                 # Keep the all-category fallback available if geocoding fails.
                 search = _google_places_search if GOOGLE_MAPS_API_KEY else _osm_places_search
                 results = search(destination, "all", query_text)
-            else:
+            elif GOOGLE_MAPS_API_KEY:
                 results = []
                 for place_category in categories:
-                    if GOOGLE_MAPS_API_KEY:
-                        found = _google_places_search(
-                            destination, place_category, query_text, center=center
-                        )
-                    else:
-                        found = _osm_places_search(
-                            destination, place_category, query_text, center=center
-                        )
+                    found = _google_places_search(
+                        destination, place_category, query_text, center=center
+                    )
                     for place in found:
                         if not any(
                             str(existing.get("id")) == str(place.get("id"))
                             for existing in results
                         ):
                             results.append(place)
+            else:
+                # One geocode and one combined Overpass query avoids five
+                # simultaneous public Nominatim requests for the same city.
+                results = _osm_places_search(
+                    destination, "all", query_text, center=center
+                )
             source = "Google Places" if GOOGLE_MAPS_API_KEY else "OpenStreetMap"
             result_limit = 30
         elif GOOGLE_MAPS_API_KEY:

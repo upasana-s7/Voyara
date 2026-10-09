@@ -2836,7 +2836,15 @@ function voyaraRenderBudget(){
   expenses.forEach(item=>{const day=Number(item.day);if(day>=1&&day<=days)byDay[day-1].total+=Number(item.amount)||0;});
   const summary=$("voyaraDailyBudgetSummary");
   if(summary){
-    summary.innerHTML=`<strong>Average daily budget: ${voyaraMoney(dailyBudget)}</strong><div class="voyara-daily-budget-grid">${byDay.map(day=>`<div><span>Day ${day.day}</span><strong>${voyaraMoney(day.total)}</strong><small>${dailyBudget>0?voyaraMoney(dailyBudget-day.total)+" vs. daily budget":"Set a budget to compare"}</small></div>`).join("")}</div>`;
+    const byCategory={};
+    expenses.forEach(item=>{
+      const category=String(item.category||"Other");
+      byCategory[category]=(byCategory[category]||0)+(Number(item.amount)||0);
+    });
+    const categoryMarkup=Object.keys(byCategory).length
+      ? `<div class="voyara-expense-category-totals"><strong>By category</strong><div>${Object.entries(byCategory).map(([category,total])=>`<span>${escapeHtml(category)} <b>${voyaraMoney(total)}</b></span>`).join("")}</div></div>`
+      : "";
+    summary.innerHTML=`<strong>Average daily budget: ${voyaraMoney(dailyBudget)}</strong><div class="voyara-daily-budget-grid">${byDay.map(day=>`<div><span>Day ${day.day}</span><strong>${voyaraMoney(day.total)}</strong><small>${dailyBudget>0?voyaraMoney(dailyBudget-day.total)+" vs. daily budget":"Set a budget to compare"}</small></div>`).join("")}</div>${categoryMarkup}`;
   }
   const list=$("voyaraExpenseList");
   if(list){

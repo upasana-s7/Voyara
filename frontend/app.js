@@ -2687,6 +2687,7 @@ function bindRecommendationsFinal() {
 ============================================================ */
 
 const VOYARA_TOOLKIT_STYLE_ID = "voyaraToolkitStyles";
+const VOYARA_EXPENSES_KEY = "voyaraToolkitExpenses";
 
 
 function voyaraEnsureTripToolkitStyles() {
@@ -2737,15 +2738,60 @@ function voyaraMoney(value){
   return "₹"+n.toLocaleString("en-IN",{maximumFractionDigits:0});
 }
 
+function voyaraGetExpenses(){
+  try {
+    const value=JSON.parse(localStorage.getItem(VOYARA_EXPENSES_KEY)||"[]");
+    return Array.isArray(value)?value:[];
+  } catch (_) { return []; }
+}
+
+function voyaraTripDayCount(){
+  const match=String(currentProfile?.days||$("days")?.value||"1").match(/\d+/);
+  return Math.max(1,Math.min(31,Number(match?.[0]||1)));
+}
+
 function voyaraRenderBudget(){
   const budgetInput=$("voyaraBudgetInput"), spent=$("voyaraSpentInput");
-  const budget=Number(budgetInput?.value)||0, amount=Number(spent?.value)||0;
+  const budget=Number(budgetInput?.value)||0, otherAmount=Number(spent?.value)||0;
+  const expenses=voyaraGetExpenses();
+  const expenseTotal=expenses.reduce((sum,item)=>sum+Math.max(0,Number(item.amount)||0),0);
+  const amount=otherAmount+expenseTotal;
   const percent=budget>0?Math.min(100,(amount/budget)*100):0;
   if($("voyaraBudgetValue"))$("voyaraBudgetValue").textContent=voyaraMoney(budget);
   if($("voyaraSpentValue"))$("voyaraSpentValue").textContent=voyaraMoney(amount);
-  if($("voyaraRemainingValue"))$("voyaraRemainingValue").textContent=voyaraMoney(Math.max(0,budget-amount));
+  if($("voyaraRemainingValue"))$("voyaraRemainingValue").textContent=voyaraMoney(budget-amount);
   if($("voyaraBudgetFill"))$("voyaraBudgetFill").style.width=percent+"%";
-  localStorage.setItem("voyaraToolkitBudget",JSON.stringify({budget,amount}));
+  localStorage.setItem("voyaraToolkitBudget",JSON.stringify({budget,amount:otherAmount}));
+
+  const days=voyaraTripDayCount(), dailyBudget=budget/days;
+  const byDay=Array.from({length:days},(_,index)=>({day:index+1,total:0}));
+  expenses.forEach(item=>{const day=Number(item.day);if(day>=1&&day<=days)byDay[day-1].total+=Number(item.amount)||0;});
+  const summary=$("voyaraDailyBudgetSummary");
+  if(summary){
+    summary.innerHTML=`<strong>Average daily budget: ${voyaraMoney(dailyBudget)}</strong><div class="voyara-daily-budget-grid">${byDay.map(day=>`<div><span>Day ${day.day}</span><strong>${voyaraMoney(day.total)}</strong><small>${dailyBudget>0?voyaraMoney(dailyBudget-day.total)+" vs. daily budget":"Set a budget to compare"}</small></div>`).join("")}</div>`;
+  }
+  const list=$("voyaraExpenseList");
+  if(list){
+    list.innerHTML=expenses.length?expenses.map(item=>`<div class="voyara-expense-item"><div><strong>${escapeHtml(item.description||item.category||"Expense")}</strong><small>${escapeHtml(item.category||"Other")} · Day ${Number(item.day)||1}</small></div><strong>${voyaraMoney(item.amount)}</strong><button type="button" data-delete-expense="${escapeHtml(item.id)}" aria-label="Delete expense">×</button></div>`).join(""):'<p class="voyara-muted">Your itemized expenses will appear here.</p>';
+    list.querySelectorAll("[data-delete-expense]").forEach(button=>button.addEventListener("click",()=>{
+      const next=voyaraGetExpenses().filter(item=>String(item.id)!==String(button.dataset.deleteExpense));
+      localStorage.setItem(VOYARA_EXPENSES_KEY,JSON.stringify(next));
+      voyaraRenderBudget();
+    }));
+  }
+}
+
+function voyaraAddExpense(){
+  const description=$("voyaraExpenseDescription"), amount=$("voyaraExpenseAmount"), day=$("voyaraExpenseDay");
+  const value=Number(amount?.value), dayNumber=Number(day?.value)||1;
+  if(!description?.value.trim()){voyaraToast("Enter an expense description.");description?.focus();return;}
+  if(!Number.isFinite(value)||value<=0){voyaraToast("Enter an expense amount greater than zero.");amount?.focus();return;}
+  if(dayNumber<1||dayNumber>31){voyaraToast("Choose a trip day between 1 and 31.");day?.focus();return;}
+  const expenses=voyaraGetExpenses();
+  expenses.push({id:`expense-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,description:description.value.trim(),category:$("voyaraExpenseCategory")?.value||"Other",amount:Math.round(value),day:dayNumber,createdAt:new Date().toISOString()});
+  localStorage.setItem(VOYARA_EXPENSES_KEY,JSON.stringify(expenses));
+  description.value="";amount.value="";
+  voyaraRenderBudget();
 }
 
 async function voyaraLoadWeather(){
@@ -2817,7 +2863,7 @@ function voyaraEnsureTripToolkit(){
       <div class="voyara-toolkit-actions"><button type="button" class="secondary-button" id="voyaraRefreshWeather">↻ Weather</button><button type="button" class="primary-button" id="voyaraShareTripBtn">↗ Share trip</button></div>
     </div>
     <div class="voyara-toolkit-grid">
-      <section class="voyara-tool-card"><div class="voyara-tool-card-head"><h4>💰 Budget Tracker</h4><button class="voyara-tool-toggle" type="button" data-tool-toggle="budget">−</button></div><div class="voyara-tool-body" data-tool-body="budget"><div class="voyara-budget-stats"><div class="voyara-budget-stat"><span>Budget</span><strong id="voyaraBudgetValue">₹0</strong></div><div class="voyara-budget-stat"><span>Spent</span><strong id="voyaraSpentValue">₹0</strong></div><div class="voyara-budget-stat"><span>Remaining</span><strong id="voyaraRemainingValue">₹0</strong></div></div><div class="voyara-budget-bar"><div class="voyara-budget-fill" id="voyaraBudgetFill"></div></div><div class="voyara-tool-row"><input id="voyaraBudgetInput" type="number" min="0" placeholder="Total budget"><input id="voyaraSpentInput" type="number" min="0" placeholder="Amount spent"></div></div></section>
+      <section class="voyara-tool-card"><div class="voyara-tool-card-head"><h4>💰 Budget Tracker</h4><button class="voyara-tool-toggle" type="button" data-tool-toggle="budget">−</button></div><div class="voyara-tool-body" data-tool-body="budget"><div class="voyara-budget-stats"><div class="voyara-budget-stat"><span>Budget</span><strong id="voyaraBudgetValue">₹0</strong></div><div class="voyara-budget-stat"><span>Spent</span><strong id="voyaraSpentValue">₹0</strong></div><div class="voyara-budget-stat"><span>Remaining</span><strong id="voyaraRemainingValue">₹0</strong></div></div><div class="voyara-budget-bar"><div class="voyara-budget-fill" id="voyaraBudgetFill"></div></div><div class="voyara-tool-row"><input id="voyaraBudgetInput" type="number" min="0" placeholder="Total budget" aria-label="Total trip budget"><input id="voyaraSpentInput" type="number" min="0" placeholder="Other spending (optional)" aria-label="Other spending not itemized below"></div><div class="voyara-expense-form"><input id="voyaraExpenseDescription" type="text" maxlength="80" placeholder="Expense (e.g. lunch)" aria-label="Expense description"><select id="voyaraExpenseCategory" aria-label="Expense category"><option>Food</option><option>Transport</option><option>Stay</option><option>Activities</option><option>Shopping</option><option>Other</option></select><input id="voyaraExpenseAmount" type="number" min="1" step="1" placeholder="₹ amount" aria-label="Expense amount"><input id="voyaraExpenseDay" type="number" min="1" value="1" placeholder="Day #" aria-label="Trip day number"><button type="button" class="primary-button" id="voyaraAddExpenseBtn">Add expense</button></div><div id="voyaraDailyBudgetSummary" class="voyara-expense-summary"></div><div id="voyaraExpenseList" class="voyara-expense-list"></div></div></section>
       <section class="voyara-tool-card"><div class="voyara-tool-card-head"><h4>🌦️ Weather</h4><button class="voyara-tool-toggle" type="button" data-tool-toggle="weather">−</button></div><div class="voyara-tool-body" data-tool-body="weather" id="voyaraWeatherBody"><div class="voyara-weather-loading">Create a trip to check weather.</div></div></section>
       <section class="voyara-tool-card wide"><div class="voyara-tool-card-head"><h4>🎒 Packing Checklist</h4><button class="voyara-tool-toggle" type="button" data-tool-toggle="packing">−</button></div><div class="voyara-tool-body" data-tool-body="packing"><div class="voyara-pack-add"><input id="voyaraPackingInput" type="text" placeholder="Add your own checklist item..." aria-label="New packing checklist item"><button type="button" class="primary-button" id="voyaraAddPackingBtn">Add</button></div><div class="voyara-pack-list" id="voyaraPackingList"></div></div></section>
       <section class="voyara-tool-card wide"><div class="voyara-tool-card-head"><h4>↗ Share Trip</h4><button class="voyara-tool-toggle" type="button" data-tool-toggle="share">−</button></div><div class="voyara-tool-body" data-tool-body="share"><div class="voyara-share-box"><span>Share your Voyara trip with friends or teammates.</span><button type="button" class="primary-button" id="voyaraShareTripBtn2">Share trip ↗</button></div></div></section>
@@ -2831,6 +2877,9 @@ function voyaraEnsureTripToolkit(){
   if($("voyaraSpentInput"))$("voyaraSpentInput").value=saved.amount||"";
   $("voyaraBudgetInput")?.addEventListener("input",voyaraRenderBudget);
   $("voyaraSpentInput")?.addEventListener("input",voyaraRenderBudget);
+  $("voyaraAddExpenseBtn")?.addEventListener("click",voyaraAddExpense);
+  $("voyaraExpenseDescription")?.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();voyaraAddExpense();}});
+  $("voyaraExpenseAmount")?.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();voyaraAddExpense();}});
   $("voyaraRefreshWeather")?.addEventListener("click",voyaraLoadWeather);
   $("voyaraAddPackingBtn")?.addEventListener("click",voyaraAddPackingItem);
   $("voyaraPackingInput")?.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();voyaraAddPackingItem();}});

@@ -218,8 +218,13 @@ OUTPUT RULES
 - Use Markdown headings, bold labels and short bullet points.
 - Keep each day or time block concise, with no more than 3 main activity bullets.
 - Include estimated costs, but never claim prices or bookings are confirmed.
-- Avoid unrealistic travel times; group nearby places together.
-- If information is uncertain, say to verify it before travel.
+- Group nearby places into the same half-day/area to reduce backtracking; do not claim an exact route was calculated.
+- Give realistic activity pacing: allow meal breaks, rest time, and a sensible number of stops.
+- When useful, give approximate travel durations between areas, clearly marked as estimates and dependent on traffic.
+- Keep costs practical for the stated budget and traveller count. Label prices as rough estimates, state the currency when clear, and distinguish per-person from group totals when possible.
+- If the budget may be tight, identify the likely trade-off and include a lower-cost alternative.
+- Do not invent specific opening hours, live weather, ticket prices, availability, bookings, or exact transit schedules. Mark details that need checking.
+- Include a short daily focus/theme so each day feels coherent, not like a random list.
 - Do not include a table.
 
 ## Trip Overview
@@ -269,9 +274,11 @@ an appropriate itinerary section
 Use bold labels and short bullets.
 Keep the summary to 2 sentences maximum.
 Avoid long paragraphs and tables.
-Keep travel times realistic.
-Do not invent confirmed bookings, live prices, opening hours or availability.
-Label costs as estimates and ask the traveller to verify time-sensitive details.
+Group nearby places into the same half-day/area to reduce backtracking, and keep the daily schedule realistic with meal and rest breaks.
+Where helpful, include approximate travel durations between areas, clearly labelled as estimates rather than live route calculations.
+Keep costs aligned with the stated budget; distinguish per-person and group costs when possible, and offer a lower-cost alternative if the budget looks tight.
+Do not invent confirmed bookings, live prices, opening hours, live weather, availability or exact transit schedules. Label costs as estimates and ask the traveller to verify time-sensitive details.
+Give each day a coherent theme and avoid packing in too many stops.
 """
 
 
@@ -306,8 +313,10 @@ Rules:
 - Keep the original destination unless the user asks to change it.
 - Consider the original budget and preferences.
 - Preserve useful parts of the original plan.
-- Do not invent confirmed prices or reservations.
-- Use clear headings and plain text.
+- Keep nearby activities together, realistic pacing, meal/rest breaks, and the stated budget.
+- If a requested change makes the schedule too crowded or exceeds the budget, explain the trade-off briefly and suggest a practical alternative.
+- Do not invent confirmed prices, opening hours or reservations.
+- Use clear headings and concise Markdown.
 """
 
 
@@ -333,10 +342,11 @@ CURRENT ITINERARY
 Create a different but realistic plan.
 
 Include:
-- Day-by-day activities
+- A coherent theme for each day and nearby activities grouped together
+- Morning, afternoon and evening activities with realistic pacing and meal/rest breaks
 - Food suggestions
-- Transport guidance
-- Approximate cost guidance
+- Approximate travel durations, clearly marked as estimates
+- Approximate cost guidance aligned with the original budget, with a lower-cost option if useful
 - Safety and travel tips
 
 Keep the same destination, duration, and general requirements

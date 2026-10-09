@@ -1,5 +1,5 @@
 
-const CACHE_NAME = "voyara-cache-v10-auth-submit-fix";
+const CACHE_NAME = "voyara-cache-v11-name-signin-fix";
 
 const APP_FILES = [
   "./",

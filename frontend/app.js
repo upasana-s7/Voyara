@@ -815,7 +815,7 @@ function renderVoyaraItinerary(markdown) {
     if (dayMatch) {
       closeList();
       const title = dayMatch[2] ? `Day ${dayMatch[1]} — ${cleanHeading(dayMatch[2])}` : `Day ${dayMatch[1]}`;
-      html.push(`<h3 class="voyara-day-heading">${voyaraInlineFormat(title)} <button type="button" class="voyara-regenerate-day-btn" data-regenerate-day="${Number(dayMatch[1])}">↻ Regenerate day</button></h3>`);
+      html.push(`<h3 class="voyara-day-heading">${voyaraInlineFormat(title)} <button type="button" class="voyara-regenerate-day-btn" data-open-day-route="${Number(dayMatch[1])}">↗ Map day</button> <button type="button" class="voyara-regenerate-day-btn" data-regenerate-day="${Number(dayMatch[1])}">↻ Regenerate day</button></h3>`);
       continue;
     }
 
@@ -823,7 +823,7 @@ function renderVoyaraItinerary(markdown) {
     if (/^day\s*\d+/i.test(cleaned)) {
       const match = cleaned.match(/^day\s*(\d+)\s*(?:[:—-]\s*)?(.*)$/i);
       closeList();
-      html.push(`<h3 class="voyara-day-heading">${voyaraInlineFormat(match[2] ? `Day ${match[1]} — ${match[2]}` : `Day ${match[1]}`)} <button type="button" class="voyara-regenerate-day-btn" data-regenerate-day="${Number(match[1])}">↻ Regenerate day</button></h3>`);
+      html.push(`<h3 class="voyara-day-heading">${voyaraInlineFormat(match[2] ? `Day ${match[1]} — ${match[2]}` : `Day ${match[1]}`)} <button type="button" class="voyara-regenerate-day-btn" data-open-day-route="${Number(match[1])}">↗ Map day</button> <button type="button" class="voyara-regenerate-day-btn" data-regenerate-day="${Number(match[1])}">↻ Regenerate day</button></h3>`);
       continue;
     }
 
@@ -883,6 +883,12 @@ function bindItineraryActions() {
   if (itineraryPreview && !itineraryPreview.dataset.dayRegenerationBound) {
     itineraryPreview.dataset.dayRegenerationBound = "true";
     itineraryPreview.addEventListener("click", async (event) => {
+      const routeButton = event.target.closest("[data-open-day-route]");
+      if (routeButton) {
+        const routeDay = Number(routeButton.dataset.openDayRoute);
+        if (Number.isInteger(routeDay) && routeDay > 0) voyaraOpenDayRoute(routeDay);
+        return;
+      }
       const button = event.target.closest("[data-regenerate-day]");
       if (!button) return;
       const dayNumber = Number(button.dataset.regenerateDay);
@@ -927,6 +933,47 @@ function bindItineraryActions() {
       downloadItinerary();
     });
   }
+}
+
+function voyaraOpenDayRoute(dayNumber) {
+  if (!currentItinerary) {
+    voyaraToast("Create or load an itinerary first.");
+    return;
+  }
+  const sectionPattern = new RegExp(
+    "(^|\\n)(?:#{1,6}\\s*)?Day\\s*" + dayNumber +
+    "\\b[^\\n]*[\\s\\S]*?(?=\\n(?:#{1,6}\\s*)?Day\\s*\\d+\\b|\\n#{1,6}\\s*(?:Local Food to Try|Getting Around|Useful Tips|Trip Overview|Quick Summary)\\b|$)",
+    "i"
+  );
+  const match = currentItinerary.match(sectionPattern);
+  if (!match) {
+    window.open("https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent((currentProfile.destination||"") + " Day " + dayNumber), "_blank", "noopener");
+    return;
+  }
+  const section = match[0];
+  const lines = section.split(/\\r?\\n/);
+  const stops = [];
+  for (const line of lines) {
+    if (!/^\\s*[-*+]\\s+/.test(line)) continue;
+    let stop = line.replace(/^\\s*[-*+]\\s+/, "").replace(/\\*\\*/g, "").trim();
+    if (/^(estimated day cost|estimated cost|budget|notes?)\\s*:/i.test(stop)) continue;
+    stop = stop.replace(/^(morning|afternoon|evening|start|next|finish)\\s*:\\s*/i, "");
+    stop = stop.split(/\\s+[—–]\\s+/)[0].replace(/\\([^)]*\\)/g, "").trim();
+    if (stop.length > 2 && !stops.includes(stop)) stops.push(stop);
+    if (stops.length >= 5) break;
+  }
+  const destination = String(currentProfile.destination||"").trim();
+  if (!stops.length) {
+    const query = [destination, "Day " + dayNumber, section.replace(/[#*\\n]/g," ").slice(0,160)].filter(Boolean).join(" ");
+    window.open("https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(query),"_blank","noopener");
+    return;
+  }
+  const origin = String(currentProfile.startingLocation||stops[0]||destination).trim();
+  const finalStop = stops.length > 1 ? stops[stops.length-1] : stops[0];
+  const waypoints = stops.length > 2 ? stops.slice(1,-1).join("|") : "";
+  const params = new URLSearchParams({api:"1",origin,destination:finalStop,travelmode:"driving"});
+  if(waypoints) params.set("waypoints",waypoints);
+  window.open("https://www.google.com/maps/dir/?"+params.toString(),"_blank","noopener");
 }
 
 async function regenerateSingleDay(dayNumber, button) {

@@ -3086,3 +3086,14 @@ body[data-theme="dark"] .welcome-screen{background:radial-gradient(ellipse at 12
 
 @media(max-width:1050px){.voyara-category-results-grid{grid-template-columns:repeat(2,minmax(0,1fr));}.explore-map-panel{max-width:none;position:static;}.explore-layout{grid-template-columns:1fr!important;}}
 @media(max-width:700px){.destination-grid{grid-template-columns:1fr!important;}.voyara-for-you-toolbar{grid-template-columns:1fr;}.voyara-category-results-grid{grid-template-columns:1fr;}.destination-guide-facts{grid-template-columns:1fr;}.destination-modal-image{height:190px;}}
+
+/* For You recommendation ratings and review snippets */
+.voyara-place-overview{margin:12px 0;padding:12px;border-radius:12px;background:#f8f5ef;border:1px solid rgba(90,70,45,.12)}
+.voyara-place-overview strong,.voyara-place-review-title{display:block;font-size:12px;font-weight:800;margin-bottom:5px}
+.voyara-place-overview p{margin:0!important;font-size:13px;line-height:1.55}
+.voyara-place-review{margin:12px 0;padding:12px;border:1px solid rgba(90,70,45,.12);border-radius:12px;background:#fff}
+.voyara-place-review-title span{font-size:11px;font-weight:600;color:#777;margin-left:4px}
+.voyara-place-review blockquote{margin:9px 0 0;padding:0 0 0 10px;border-left:2px solid #4d8079}
+.voyara-place-review blockquote p{font-size:13px;line-height:1.55;margin:0 0 6px}
+.voyara-place-review blockquote footer,.voyara-place-address{font-size:11px;line-height:1.45;color:#777}
+.voyara-place-rating{flex-wrap:wrap}

@@ -869,6 +869,35 @@ def _geocode_destination(destination):
     return data[0]
 
 
+def _distance_km(lat1, lon1, lat2, lon2):
+    """Approximate straight-line distance in kilometres."""
+    import math
+
+    try:
+        lat1, lon1, lat2, lon2 = map(
+            float, (lat1, lon1, lat2, lon2)
+        )
+    except (TypeError, ValueError):
+        return None
+
+    radius_km = 6371.0
+    phi1 = math.radians(lat1)
+    phi2 = math.radians(lat2)
+    delta_phi = math.radians(lat2 - lat1)
+    delta_lambda = math.radians(lon2 - lon1)
+    value = (
+        math.sin(delta_phi / 2) ** 2
+        + math.cos(phi1) * math.cos(phi2)
+        * math.sin(delta_lambda / 2) ** 2
+    )
+    return round(
+        radius_km * 2 * math.atan2(
+            math.sqrt(value), math.sqrt(max(0, 1 - value))
+        ),
+        1
+    )
+
+
 def _google_places_search(
     destination,
     category,
@@ -942,6 +971,14 @@ def _google_places_search(
         )
 
     results = []
+    center_lat = center_lon = None
+    try:
+        center = _geocode_destination(destination)
+        center_lat = center.get("lat")
+        center_lon = center.get("lon")
+    except Exception as error:
+        # Distance is optional; never fail place search because geocoding failed.
+        print("DESTINATION CENTRE LOOKUP ERROR:", error)
 
     for place in data.get("places", []):
         display = place.get(
@@ -981,6 +1018,16 @@ def _google_places_search(
             ),
             "lon": location.get(
                 "longitude"
+            ),
+            "distanceKm": (
+                _distance_km(
+                    center_lat, center_lon,
+                    location.get("latitude"), location.get("longitude")
+                )
+                if center_lat is not None and center_lon is not None
+                and location.get("latitude") is not None
+                and location.get("longitude") is not None
+                else None
             ),
             "rating": place.get(
                 "rating"
@@ -1180,6 +1227,7 @@ def _osm_places_search(
             "address": address,
             "lat": item_lat,
             "lon": item_lon,
+            "distanceKm": _distance_km(lat, lon, item_lat, item_lon),
             "rating": None,
             "ratingCount": None,
             "mapUrl": (
@@ -1240,6 +1288,7 @@ def _osm_places_search(
                 "address": item.get("display_name") or destination,
                 "lat": item.get("lat"),
                 "lon": item.get("lon"),
+                "distanceKm": _distance_km(lat, lon, item.get("lat"), item.get("lon")),
                 "rating": None,
                 "ratingCount": None,
                 "mapUrl": (
